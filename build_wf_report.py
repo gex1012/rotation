@@ -65,6 +65,63 @@ def ema_vs_ma(story, B):
               PageBreak()]
 
 
+def _merge_params(B):
+    e = B["EMA"]["step1"].set_index("策略"); m = B["MA"]["step1"].set_index("策略")
+    rows = []
+    for q in ["领先Q1", "改善Q2", "转弱Q4", "落后Q3"]:
+        rows.append({"象限": q,
+                     "EMA参数": e.loc[q, "最优参数"].replace("EMA_", ""),
+                     "EMA持有": e.loc[q, "最优holding"], "EMA夏普": e.loc[q, "OOS夏普"],
+                     "MA参数": m.loc[q, "最优参数"].replace("MA_", ""),
+                     "MA持有": m.loc[q, "最优holding"], "MA夏普": m.loc[q, "OOS夏普"]})
+    return pd.DataFrame(rows)
+
+
+def _yearly_compare(B, bench):
+    e1, m1 = B["EMA"]["step1"], B["MA"]["step1"]
+    eq = e1.loc[e1["OOS夏普"].idxmax(), "策略"]; mq = m1.loc[m1["OOS夏普"].idxmax(), "策略"]
+    ey = B["EMA"]["s1_year"].set_index("策略"); my = B["MA"]["s1_year"].set_index("策略")
+    yrs = [c for c in ey.columns]
+    rows = [{"最佳策略": f"EMA·{eq}", **{y: ey.loc[eq, y] for y in yrs}},
+            {"最佳策略": f"MA·{mq}", **{y: my.loc[mq, y] for y in yrs}},
+            {"最佳策略": f"买入持有{bench}", **{y: ey.loc[f"买入持有{bench}", y] for y in yrs}}]
+    return pd.DataFrame(rows)
+
+
+def consolidation(story, R):
+    heat = {}
+    hp = os.path.join(OUT, "paramheat_charts.pkl")
+    if os.path.exists(hp):
+        heat = pickle.load(open(hp, "rb"))
+    story += [Paragraph("第四部分 · 横向对比（EMA vs MA）", ST["h1"]), hr(),
+              Paragraph("4.1 为什么 MA RRG 优于 EMA RRG", ST["h2"]),
+              df_table(pd.DataFrame([
+                  ["变换性质", "100+zscore(...) = 均值回归型振荡器", "MA(100×RS/RS_{t−L}) = 趋势跟随型"],
+                  ["对持续强势", "z-score 随均值追上而回落→提前把龙头轮出", "趋势在就>100→一直拿住"],
+                  ["强度幅度", "压进~92–108窄带，丢失超额幅度", "RS-Ratio 可到159，保留幅度→龙头分得开"]],
+                  columns=["维度", "EMA RRG", "MA RRG"]),
+                  col_widths=[24 * mm, 73 * mm, 78 * mm], fontsize=8, wrap_cols=[1, 2]),
+              bullet("数据佐证：科技 MA·转弱Q4 在 2025 +172%、2026 +96%，而 EMA·转弱Q4 2025 仅 +12%——"
+                     "MA 骑住 AI/半导体大趋势，EMA 的 z-score 压缩削平涨幅且提前换仓。"),
+              bullet("<b>本质</b>：2022–2026 是强趋势行情，奖励趋势跟随、惩罚均值回归，故 MA 胜。"
+                     "⚠️ regime 依赖——若转为震荡/反转市，EMA 振荡器特性可能反超。"),
+              PageBreak()]
+    for key, bench in [("SPY", "SPY"), ("SOXX", "SOXX")]:
+        B = R[key]
+        story += [Paragraph(f"4.2 {B['tag']}（vs {bench}）· 选参 + OOS 汇总", ST["h2"]),
+                  df_table(_merge_params(B), fontsize=8),
+                  Spacer(1, 2 * mm), Paragraph(f"4.3 {B['tag']}· 各模型最佳策略逐年 OOS%（含买入持有）", ST["h2"]),
+                  df_table(_yearly_compare(B, bench), fontsize=8.5, bold_rows=[3])]
+        tagcn = "行业" if key == "SPY" else "科技"
+        for m in ["EMA", "MA"]:
+            k = f"{tagcn}_{m}"
+            if k in heat:
+                story += [Spacer(1, 2 * mm),
+                          Paragraph(f"参数选择热力图 · {B['tag']} {m}（黑框=选中最优）", ST["cap"]),
+                          img(heat[k], width=150 * mm)]
+        story += [PageBreak()]
+
+
 def build(R):
     make_formulas()
     cost_bps = R["cost_bps"]
@@ -105,8 +162,12 @@ def build(R):
         model_section(s, B, "MA", B["bench"], is_tech)
         ema_vs_ma(s, B)
 
+    # consolidated cross-comparison
+    consolidation(s, R)
+
     # conclusion
-    s += [Paragraph("第四部分 · 结论（待你选择推进的模型）", ST["h1"]), hr(),
+    s += [Paragraph("第五部分 · 结论（可开始选择与改进）", ST["h1"]), hr(),
+          bullet("<b>两大块一致结论：MA RRG 全面优于 EMA RRG</b>（行业各象限 OOS 夏普更高；科技 MA 多象限 OOS 夏普超 SOXX）。"),
           bullet("本报告把所有策略统一到『2018-21 定参 → 2022+ 实盘』，消除了参数过拟合；两模型(EMA/MA)、两块(SPY/SOXX)、"
                  "Step1/Step2 的 OOS 结果与逐年、PnL 均已列出，供你选择推进哪套做进一步优化。"),
           bullet("科技块绝对收益仍偏高（选择性幸存者偏差），比较时以<b>相对基准的 OOS 夏普/超额</b>为准，勿看绝对值。"),
