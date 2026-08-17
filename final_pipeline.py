@@ -31,7 +31,7 @@ OUT = os.path.join(os.path.dirname(__file__), "output")
 
 CAP = 100_000
 START = pd.Timestamp("2021-01-01")
-COST = 0.0004         # 0.4 per-mille (4 bps) of traded notional per unit turnover
+COST = 0.002          # 2 per-mille (20 bps) of traded notional per unit turnover
 EXEC = "t1_close"     # signal at close d, execute at close d+1
 TOPK = 5
 PARAMS = RRGParams(126, 8, 2.2, 3)

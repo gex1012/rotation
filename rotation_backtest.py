@@ -36,6 +36,9 @@ class StratConfig:
     # empty -> no filter (unless quad12_only). States: Lead=Q1 Impr=Q2 Weak=Q4 Lag=Q3.
     quad_filter: tuple = ()
     rank_by: str = "score"           # "score" (momentum-tilted) or "dist" (distance from origin)
+    # merged-quadrant selection: False -> top_k from the UNION (5 total, best wins);
+    #   True -> top_k from EACH quadrant separately (e.g. 5+5=10 names, equal weight)
+    per_quad_topk: bool = False
     cost_per_turnover: float = 0.0005  # round-trip cost per unit of traded weight
     params: RRGParams = field(default_factory=RRGParams)
     # what to do when the Q1+Q2 filter leaves fewer than top_k names:
@@ -91,6 +94,14 @@ def _select(snap, cfg):
 
     if allowed is None:                           # headline: top-k across all 37 -> never short
         picks = [s for s, _ in scored[:k]]
+        w = 1.0 / len(picks) if picks else 0.0
+        return {s: w for s in picks}, picks, 0.0
+
+    # "each-quadrant top-k" merged selection: 5 from each quadrant -> 10 names, equal weight
+    if cfg.per_quad_topk and len(allowed) >= 2:
+        picks = []
+        for st in sorted(allowed):
+            picks += [s for s, r in scored if r["state"] == st][:k]
         w = 1.0 / len(picks) if picks else 0.0
         return {s: w for s in picks}, picks, 0.0
 

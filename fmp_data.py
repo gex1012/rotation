@@ -30,7 +30,7 @@ def _load_api_key():
 
 API_KEY = _load_api_key()
 BASE = "https://financialmodelingprep.com/stable/historical-price-eod/full"
-HISTORY_FROM = "2019-01-01"   # fetch back to 2019 so warm-up completes before 2021
+HISTORY_FROM = "2017-01-01"   # fetch back to 2017 so warm-up completes before 2018 (in-sample split)
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "data_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 

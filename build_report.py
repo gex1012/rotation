@@ -63,13 +63,19 @@ def hr():
 
 
 def df_table(df, col_widths=None, fontsize=7.6, highlight_col=None, hi_rows=None,
-             bold_rows=None, page_width=175 * mm):
+             bold_rows=None, page_width=175 * mm, wrap_cols=None):
     header = list(df.columns)
     data = [header] + df.astype(object).values.tolist()
     for r in range(1, len(data)):
         data[r] = ["" if (v is None or (isinstance(v, float) and pd.isna(v))) else v
                    for v in data[r]]
     ncol = len(header)
+    if wrap_cols:  # render long-text columns as wrapping Paragraphs (avoid overlap)
+        cellst = ParagraphStyle("cell", fontName="YaHei", fontSize=fontsize,
+                                leading=fontsize + 2, textColor=INK)
+        for r in range(1, len(data)):
+            for c in wrap_cols:
+                data[r][c] = Paragraph(str(data[r][c]), cellst)
     if col_widths is None:
         col_widths = [page_width / ncol] * ncol
     t = Table(data, colWidths=col_widths, repeatRows=1)

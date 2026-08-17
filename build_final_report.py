@@ -12,6 +12,32 @@ from build_report import ST, df_table, img, kpi_band, bullet, hr, footer, OUT
 from build_tech_report import warn_box
 
 
+def make_formulas():
+    """Render the EMA-RRG and MA-RRG calculation chains as clean equation images."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    plt.rcParams["mathtext.fontset"] = "cm"
+    sets = {
+        "formula_ema.png": [
+            r"$\mathrm{RS}_t=\dfrac{\mathrm{Asset}_t}{\mathrm{Benchmark}_t}$",
+            r"$\mathrm{RSRatio}_t=100+\dfrac{\mathrm{EMA}_s(\mathrm{RS})_t-\mu_Z}{\sigma_Z}\cdot k$",
+            r"$\mathrm{RSMom}_t=100+\dfrac{\Delta_L\,\mathrm{RSRatio}_t-\mu_Z}{\sigma_Z}\cdot k,\ \ \Delta_L x_t=x_t-x_{t-L}$",
+        ],
+        "formula_ma.png": [
+            r"$\mathrm{RS}_t=\dfrac{\mathrm{Asset}_t}{\mathrm{Benchmark}_t}$",
+            r"$\mathrm{RSRatio}_t=\mathrm{MA}_s\!\left(100\times\dfrac{\mathrm{RS}_t}{\mathrm{RS}_{t-L_R}}\right)$",
+            r"$\mathrm{RSMom}_t=\mathrm{MA}_s\!\left(100\times\dfrac{\mathrm{RSRatio}_t}{\mathrm{RSRatio}_{t-L_M}}\right)$",
+        ],
+    }
+    for fn, eqs in sets.items():
+        fig = plt.figure(figsize=(8.6, 0.7 * len(eqs) + 0.3))
+        for i, e in enumerate(eqs):
+            fig.text(0.02, 1 - (i + 0.7) / (len(eqs) + 0.3), e, fontsize=16, ha="left", va="center")
+        fig.savefig(os.path.join(OUT, fn), dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+
 def _f(s):
     return float(str(s).replace(",", ""))
 
@@ -82,9 +108,13 @@ def universe_section(story, U, tag, is_tech=False):
     qcn = {"Lead": "领先Q1", "Impr": "改善Q2", "Weak": "转弱Q4", "Lag": "落后Q3"}
     adjbp = "、".join(f"{qcn[a]}+{qcn[b]}@{r}d" for (a, b), r in U["adj_best"].items())
     story += [Paragraph("④ 相邻象限合并策略（RRG 轮动相邻 · 仅做多）", ST["h2"]),
-              Paragraph("<b>合并后的持有周期怎么定</b>：不沿用单象限的周期，而是把合并组合<b>当作一个新策略</b>，"
-                        "对其单独做 5–30 日的周期寻优，取其自身最优。下面 A 表为统一 20 日、B 表为各自最优周期。",
+              Paragraph("<b>合并后怎么选 top-5</b>：把两象限成分<b>并成一个池子一起竞争</b>，按打分 "
+                        "score = (RS-Ratio−100) + 1.5×(RS-Momentum−100) <b>排序取最高的 5 个</b>（各 1/5）。"
+                        "注意：<b>不是</b>按离原点(100,100)的距离——距离无符号，会把深陷落后象限的弱票也当『远』选进来；"
+                        "score 带方向且动量加权，只挑真正强的。（另有『每象限各取5=10只1/10』的均衡口径，见第五部分对比。）",
                         ST["body"]),
+              Paragraph("<b>合并后的持有周期怎么定</b>：不沿用单象限周期，而是把合并组合<b>当作一个新策略</b>，"
+                        "对其单独做 5–30 日周期寻优取自身最优。下面 A 表统一 20 日、B 表各自最优周期。", ST["body"]),
               Paragraph("A. 统一 20 日", ST["cap"]), df_table(U["step5"], fontsize=8),
               Spacer(1, 2 * mm), Paragraph(f"B. 各自最优周期（{adjbp}）", ST["cap"]),
               df_table(U["step5b"], fontsize=8)]
@@ -109,6 +139,7 @@ def universe_section(story, U, tag, is_tech=False):
 def build(R):
     ind, tech = R["industry"], R["tech"]
     cost_bps = R["cost_bps"]; p = R["params"]
+    make_formulas()
     s = []
 
     # cover
@@ -131,13 +162,18 @@ def build(R):
               ["第四象限 转弱 Weak", "Ratio≥100 & Mom<100", "相对强但动能衰减"],
               ["第三象限 落后 Lag", "Ratio<100 & Mom<100", "相对弱且动能衰减"]],
               columns=["象限", "定义", "含义"]), col_widths=[46*mm, 55*mm, 74*mm], fontsize=9),
-          Spacer(1, 3 * mm), Paragraph("1.2 计算链条", ST["h2"]),
-          Paragraph("RS = 板块 / 基准 → RS_smooth = EMA(RS, SMOOTH) → "
-                    "RS-Ratio = 100 + zscore(RS_smooth, ZWIN)×SCALE → "
-                    "RawMom = RS-Ratio 的 MOM_LAG 日变化 → RS-Momentum = 100 + zscore(RawMom, ZWIN)×SCALE。", ST["body"]),
-          Spacer(1, 3 * mm), Paragraph("1.3 四个参数详解", ST["h2"]),
+          Spacer(1, 3 * mm), Paragraph("1.2 计算链条（两种动量定义）", ST["h2"]),
+          Paragraph("本研究实现两套 RRG，可切换：", ST["body"]),
+          Paragraph("<b>EMA RRG</b>（z-score 标准化版，主口径）：", ST["small"]),
+          img(os.path.join(OUT, "formula_ema.png"), width=150 * mm),
+          Paragraph("<b>MA RRG</b>（长期相对趋势 ROC/简单均线版，对照口径）：", ST["small"]),
+          img(os.path.join(OUT, "formula_ma.png"), width=150 * mm),
+          Paragraph("其中 μ_Z、σ_Z 为窗口 ZWIN 内的均值/标准差；MA_s 为窗口 s 的简单移动平均；"
+                    "L_R、L_M 为 Ratio/Momentum 的 ROC 回溯步长。两者均以 100 为象限分界。", ST["small"]),
+          PageBreak(), Paragraph("1.3 参数详解", ST["h2"]),
+          Paragraph("EMA RRG 参数：", ST["small"]),
           df_table(pd.DataFrame([
-              ["ZWIN", str(p["zwin"]), "z-score 标准化窗口(交易日)。126≈半年。决定平滑/记忆长度",
+              ["ZWIN", str(p["zwin"]), "z-score 标准化窗口(交易日)，126≈半年，决定平滑/记忆长度",
                "调大→更平滑、更看长趋势、换手低、拐点慢；调小→更敏感、噪声大"],
               ["SMOOTH", str(p["smooth"]), "对原始 RS 线做 EMA 去噪的跨度",
                "调大→去噪更狠、反应更慢；调小→保留更多短期波动"],
@@ -146,12 +182,14 @@ def build(R):
               ["SCALE", str(p["scale"]), "仅把 z-score 缩放到 ~92–108 视觉区间",
                "★ 象限判定看 z 的符号、排序看等比放大后的相对值，均与 SCALE 无关→只影响画图"]],
               columns=["参数", "值", "含义", "调参效果"]),
-              col_widths=[22*mm, 14*mm, 66*mm, 73*mm], fontsize=7.8),
+              col_widths=[22*mm, 14*mm, 66*mm, 73*mm], fontsize=8, wrap_cols=[2, 3]),
+          Spacer(1, 2 * mm), Paragraph("MA RRG 参数：L_R(Ratio ROC回溯) / L_M(Momentum ROC回溯) / s(简单均线平滑)，"
+                    "原文测试区间 L_R∈{150,180,220,250,300}、L_M∈{20,40,60,80,100}、s∈{10,20,30}。", ST["small"]),
           PageBreak(),
           Paragraph("1.4 回测规则", ST["h2"]),
           bullet(f"<b>仅做多</b>：每象限按打分选 top-{R['topk']} 等权，不足则留现金，<b>不做空</b>。"),
           bullet("<b>成交</b>：收盘价出信号，<b>T+1 收盘价</b>换仓（无前视）。"),
-          bullet(f"<b>成本</b>：换手 notional × {cost_bps:.1f}bps（千分之0.4）。"),
+          bullet(f"<b>成本</b>：换手 notional × {cost_bps:.0f}bps（千分之{cost_bps/10:.0f}）。"),
           bullet("<b>holding</b>：仅在每 N 日换仓点重算象限并重选；周期内持仓固定，象限中途变化不即时离场（见各部分 ③）。"),
           bullet("<b>流程</b>：各象限固定周期 holding → 参数(ZWIN/SMOOTH/MOM_LAG)寻优 → 各象限持有周期寻优 → 相邻象限合并(其周期单独寻优)。"),
           PageBreak()]
@@ -164,11 +202,35 @@ def build(R):
     s += [Paragraph(f"第三部分 · 科技个股（129 只 vs {tech['bench']}）", ST["h1"]), hr()]
     universe_section(s, tech, "科技", is_tech=True)
 
-    # Part 4 overall
-    s += [Paragraph("第四部分 · 总结论与免责", ST["h1"]), hr(),
+    # Part 4 extended studies (EMA vs MA / merged selection / tech IS-OOS)
+    ex_path = os.path.join(OUT, "extras_results.pkl")
+    if os.path.exists(ex_path):
+        E = pickle.load(open(ex_path, "rb"))
+        s += [Paragraph("第四部分 · 扩展研究", ST["h1"]), hr(),
+              Paragraph("4.1 EMA RRG vs MA RRG（同一回测、两种动量定义 · 行业 vs SPY）", ST["h2"]),
+              Paragraph(f"EMA 参数：{E['emama_ind']['ename']}；MA 参数：{E['emama_ind']['mname']}。", ST["small"]),
+              df_table(E["emama_ind"]["summary"], fontsize=8, bold_rows=[len(E["emama_ind"]["summary"])]),
+              img(E["emama_ind"]["chart"], width=163 * mm),
+              Paragraph("逐年收益%", ST["cap"]), df_table(E["emama_ind"]["ymat"], fontsize=8),
+              PageBreak(),
+              Paragraph("4.2 合并选股：并集选5 vs 各取5(10只·1/10)", ST["h2"]),
+              Paragraph("并集选5=两象限并池按 score 取全场最强 5 个(各1/5，质量优先)；"
+                        "各取5=每象限各取前5合成10只(各1/10，均衡曝光、分散更好但纳入较弱票)。", ST["small"]),
+              df_table(E["merge_ind"]["summary"], fontsize=7.8),
+              img(E["merge_ind"]["chart"], width=163 * mm), PageBreak(),
+              Paragraph("4.3 科技：抛开参数过拟合的样本外实盘（2018-2021 定周期 → 2022+ 实盘）", ST["h2"]),
+              Paragraph(f"仅用 2018-2021 数据为各象限选持有周期（{E['tech_oos']['is_period']}），"
+                        "再原封不动用于 2022 以后的『实盘』。这消除<b>参数</b>过拟合；但宇宙仍是今日已知名单，"
+                        "<b>幸存者偏差未除</b>（要彻底消除须 point-in-time 成分）。", ST["body"]),
+              df_table(E["tech_oos"]["summary"], fontsize=8.5),
+              Paragraph("OOS(2022+) 逐年收益%", ST["cap"]), df_table(E["tech_oos"]["ymat"], fontsize=8.5),
+              img(E["tech_oos"]["chart"], width=163 * mm), PageBreak()]
+
+    # Part 5 overall
+    s += [Paragraph("第五部分 · 总结论与免责", ST["h1"]), hr(),
           bullet("<b>参数</b>：Z126/S8/M3（半年窗口）样本内最稳；SCALE 已验证不影响决策；参数与周期均存在过拟合，须滚动验证。"),
-          bullet("<b>holding</b>：周期内不即时离场是刻意的低换手设计；短周期在 4bps 成本后仍被压缩。"),
-          bullet("<b>合并象限</b>：其持有周期单独寻优，而非沿用单象限周期。"),
+          bullet(f"<b>holding</b>：周期内不即时离场是刻意的低换手设计；短周期在 {cost_bps:.0f}bps 成本后仍被压缩。"),
+          bullet("<b>EMA vs MA</b>：两种动量定义结果见第四部分；<b>合并象限</b>选股默认『并集按 score 选5』，持有周期单独寻优。"),
           bullet("<b>回撤</b>：象限策略回撤普遍深于 cap-weighted 基准，弱动量象限收益高但回撤最深。"),
           bullet(f"<b>科技(vs {tech['bench']})</b>：绝对业绩含幸存者偏差，仅作强弱监控/选股漏斗；可信回测需 point-in-time 成分。"),
           Spacer(1, 4 * mm), hr(), Paragraph("免责声明", ST["h2"]),
