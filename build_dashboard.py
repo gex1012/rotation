@@ -23,6 +23,11 @@ HTML = r"""<title>RRG 象限轮动看板</title>
     border-radius:8px;padding:7px 16px;font-size:13px;cursor:pointer;font-family:var(--mono)}
   .tabs button.on{background:var(--accent);color:#04121c;font-weight:700;border-color:var(--accent)}
   .pane{display:none}.pane.on{display:block}
+  .subtabs{display:flex;gap:6px;margin:2px 0 14px}
+  .subtabs button{background:var(--panel2);color:var(--muted);border:1px solid var(--border);
+    border-radius:7px;padding:5px 14px;font-size:12.5px;cursor:pointer;font-family:var(--mono)}
+  .subtabs button.on{background:#1b2740;color:var(--accent);border-color:var(--accent);font-weight:700}
+  .subpane{display:none}.subpane.on{display:block}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-left:auto}
   .legend b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
   .grid2{display:grid;grid-template-columns:minmax(0,540px) 1fr;gap:20px}
@@ -36,7 +41,7 @@ HTML = r"""<title>RRG 象限轮动看板</title>
   .qlabel{font-family:var(--mono);font-size:12px;font-weight:700}
   .dot{cursor:pointer}.tip{position:fixed;pointer-events:none;background:#05070c;border:1px solid var(--border);
     border-radius:7px;padding:7px 9px;font-size:12px;font-family:var(--mono);z-index:30;opacity:0;transition:opacity .1s;max-width:240px}
-  .groups{display:flex;flex-direction:column;gap:12px;max-height:1400px}
+  .groups{display:flex;flex-direction:column;gap:12px}
   .group{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 11px}
   .ghead{display:flex;align-items:center;gap:9px;margin-bottom:8px}
   .ghead .gname{font-weight:700;font-size:13px}
@@ -89,11 +94,20 @@ function mv(e){tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'
 function hide(){tip.style.opacity=0;}
 document.getElementById('sub').textContent='行业截至 '+B.ind.asof+' · 科技截至 '+B.tech.asof+' · 成本 '+B.meta.cost_bps+'bps · '+B.meta.exec;
 
-function panelHTML(id){return `<div class="grid2">
-  <div class="card"><h2>相对旋转图 <span class="toggle" id="tog-${id}">
-    <button data-m="subs" class="on">子板块</button><button data-m="stocks">个股</button></span></h2>
-    <div id="plot-${id}"></div></div>
-  <div><div id="grp-${id}" class="groups"></div></div></div>`;}
+function panelHTML(id){return `
+  <div class="subtabs" id="st-${id}">
+    <button data-s="plot" class="on">象限图</button>
+    <button data-s="tiles">个股列表</button>
+  </div>
+  <div class="subpane on" id="sp-plot-${id}">
+    <div class="card" style="max-width:680px"><h2>相对旋转图 (RS-Ratio × RS-Momentum)
+      <span class="toggle" id="tog-${id}">
+      <button data-m="subs" class="on">子板块</button><button data-m="stocks">个股</button></span></h2>
+      <div id="plot-${id}"></div></div>
+  </div>
+  <div class="subpane" id="sp-tiles-${id}">
+    <div id="grp-${id}" class="groups"></div>
+  </div>`;}
 
 function drawPlot(id,D,mode){
   const pts=(mode==='subs'?D.subs:D.stocks).map(s=>({x:s.ratio,y:s.mom,st:s.state,
@@ -141,6 +155,11 @@ function initPanel(id,D){
   document.getElementById('tog-'+id).onclick=e=>{const b=e.target.closest('button');if(!b)return;
     document.querySelectorAll('#tog-'+id+' button').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');drawPlot(id,D,b.dataset.m);};
+  document.getElementById('st-'+id).onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    document.querySelectorAll('#st-'+id+' button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.getElementById('sp-plot-'+id).classList.toggle('on',b.dataset.s==='plot');
+    document.getElementById('sp-tiles-'+id).classList.toggle('on',b.dataset.s==='tiles');};
 }
 function initHold(){
   let h='';
