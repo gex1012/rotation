@@ -69,10 +69,20 @@ def universe_section(story, U, tag, is_tech=False):
     story += [Paragraph(f"基准 {br['策略']}：{br['最终$']}$ · 年化 {br['年化%']}% · 夏普 {bsh} · 回撤 {br['最大回撤%']}%",
                         ST["small"]), Spacer(1, 2 * mm)]
 
-    # ① holding @20d
+    # ① holding @20d  (with date range, buy&hold, PnL chart, yearly)
+    w = U.get("window", ("?", "?"))
+    step2_tbl = pd.concat([U["step2"], pd.DataFrame([br])], ignore_index=True)
     story += [Paragraph("① 各象限 holding 回测（固定 20 日换仓）", ST["h2"]),
-              df_table(U["step2"], fontsize=8)]
+              Paragraph(f"<b>回测区间：{w[0]} 至 {w[1]}</b>　·　换仓 20 交易日　·　$10万本金　·　"
+                        f"含『买入持有 {bench}』(long &amp; hold) 对比。", ST["small"]),
+              df_table(step2_tbl, fontsize=8, bold_rows=[len(step2_tbl)])]
     story += commentary_block(U["step2"], br)
+    if "step2" in U["charts"]:
+        story += [Spacer(1, 2 * mm), Paragraph("PnL 净值曲线（含买入持有）", ST["cap"]),
+                  img(U["charts"]["step2"], width=163 * mm)]
+    if "step2_ymat" in U:
+        story += [PageBreak(), Paragraph("① 逐年收益%（各象限@20d + 买入持有）", ST["h2"]),
+                  df_table(U["step2_ymat"], fontsize=8, bold_rows=[len(U["step2_ymat"])])]
     story += [PageBreak()]
 
     # ② parameter testing

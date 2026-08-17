@@ -100,7 +100,7 @@ function panelHTML(id){return `
     <button data-s="tiles">个股列表</button>
   </div>
   <div class="subpane on" id="sp-plot-${id}">
-    <div class="card" style="max-width:680px"><h2>相对旋转图 (RS-Ratio × RS-Momentum)
+    <div class="card" style="max-width:940px"><h2>相对旋转图 (RS-Ratio × RS-Momentum)
       <span class="toggle" id="tog-${id}">
       <button data-m="subs" class="on">子板块</button><button data-m="stocks">个股</button></span></h2>
       <div id="plot-${id}"></div></div>
@@ -111,7 +111,7 @@ function panelHTML(id){return `
 
 function drawPlot(id,D,mode){
   const pts=(mode==='subs'?D.subs:D.stocks).map(s=>({x:s.ratio,y:s.mom,st:s.state,
-    g:s.strengthening,lab:mode==='subs'?s.sub:s.ticker,r:mode==='subs'?9:5,
+    g:s.strengthening,lab:mode==='subs'?s.sub:s.ticker,r:mode==='subs'?9:6,
     tip:`<b style="color:${QHEX[s.st||s.state]}">${QN[s.state]}</b> · ${mode==='subs'?s.sub:(s.ticker+' '+s.name)}<br>R ${s.ratio} · M ${s.mom}`}));
   const W=540,H=540,p=32,xs=pts.map(a=>a.x),ys=pts.map(a=>a.y);
   const xn=Math.min(96,...xs)-.5,xx=Math.max(104,...xs)+.5,yn=Math.min(96,...ys)-.5,yx=Math.max(104,...ys)+.5;
