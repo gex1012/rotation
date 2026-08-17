@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.fmp_api_key
+.streamlit/secrets.toml
+data_cache/
+output/*.png
+output/*.pdf
+output/*.xlsx
+output/*.log
+output/*.csv
+output/run_log.txt
+
+output/*log*.txt
+output/refresh_test.log
+output/results.pkl
+output/tech_results.pkl

@@ -1,0 +1,197 @@
+<title>Tech RRG 象限面板</title>
+<style>
+  :root{
+    --bg:#0a0d13; --panel:#121722; --panel2:#0e131d; --border:#242c3a;
+    --ink:#e6eaf2; --muted:#7d8798; --accent:#38bdf8;
+    --lead:#22c55e; --impr:#3b82f6; --weak:#f59e0b; --lag:#ef4444; --gold:#facc15;
+    --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+    --sans:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+       -webkit-font-smoothing:antialiased;font-size:14px}
+  .wrap{max-width:1440px;margin:0 auto;padding:18px 20px 60px}
+  header{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
+         border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px}
+  h1{font-size:19px;margin:0;letter-spacing:.5px;font-weight:700}
+  h1 .bench{color:var(--accent)}
+  .sub{color:var(--muted);font-size:12px;font-family:var(--mono)}
+  .spacer{flex:1}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+  .legend b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .grid2{display:grid;grid-template-columns:minmax(0,560px) 1fr;gap:22px}
+  @media(max-width:1040px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .card h2{font-size:13px;margin:0 0 10px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .toggle{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-left:10px}
+  .toggle button{background:transparent;color:var(--muted);border:0;padding:4px 11px;font-size:12px;cursor:pointer;font-family:var(--mono)}
+  .toggle button.on{background:var(--accent);color:#04121c;font-weight:700}
+  svg{width:100%;height:auto;display:block}
+  .qlabel{font-family:var(--mono);font-size:12px;font-weight:700;opacity:.85}
+  .dot{cursor:pointer;transition:opacity .15s}
+  .dot:hover{opacity:1}
+  .tip{position:fixed;pointer-events:none;background:#05070c;border:1px solid var(--border);
+       border-radius:7px;padding:7px 9px;font-size:12px;font-family:var(--mono);z-index:20;opacity:0;transition:opacity .1s;max-width:230px}
+  .tip .q{font-weight:700}
+  /* tile grid */
+  .groups{display:flex;flex-direction:column;gap:14px}
+  .group{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .ghead{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .ghead .gname{font-weight:700;font-size:13px}
+  .ghead .gq{font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:20px;font-weight:700}
+  .ghead .gn{color:var(--muted);font-size:11px;font-family:var(--mono);margin-left:auto}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:7px}
+  .tile{border:1px solid var(--border);border-left-width:3px;border-radius:7px;padding:7px 8px;
+        background:var(--panel2);position:relative;min-height:58px}
+  .tile.gold{border-color:var(--gold);box-shadow:0 0 0 1px rgba(250,204,21,.25)}
+  .tile .tk{font-family:var(--mono);font-weight:700;font-size:13px}
+  .tile .nm{color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .rm{font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:4px;
+            font-variant-numeric:tabular-nums;display:flex;justify-content:space-between}
+  .tile .rm b{color:var(--ink);font-weight:600}
+  .filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .chip{border:1px solid var(--border);background:var(--panel);color:var(--muted);border-radius:20px;
+        padding:3px 11px;font-size:11.5px;cursor:pointer;font-family:var(--mono)}
+  .chip.on{border-color:var(--accent);color:var(--accent)}
+  .foot{margin-top:26px;color:var(--muted);font-size:11px;line-height:1.6;font-family:var(--mono)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>TECH RRG · 象限面板 <span class="bench" id="benchTag"></span></h1>
+    <span class="sub" id="asof"></span>
+    <div class="spacer"></div>
+    <div class="legend">
+      <span><b style="background:var(--lead)"></b>领先 Q1</span>
+      <span><b style="background:var(--impr)"></b>改善 Q2</span>
+      <span><b style="background:var(--weak)"></b>转弱 Q4</span>
+      <span><b style="background:var(--lag)"></b>落后 Q3</span>
+      <span><b style="background:var(--gold)"></b>金边=走强</span>
+    </div>
+  </header>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>相对旋转图 (RS-Ratio × RS-Momentum)
+        <span class="toggle" id="modeTog">
+          <button data-m="subs" class="on">子板块</button>
+          <button data-m="stocks">个股</button>
+        </span>
+      </h2>
+      <div id="plot"></div>
+    </div>
+    <div>
+      <h2 style="font-size:13px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:2px 0 10px">
+        个股象限分布（按子板块）</h2>
+      <div class="filters" id="filters"></div>
+      <div class="groups" id="groups"></div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot"></div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = {"asof": "2026-08-14", "bench": "QQQ", "params": {"zwin": 126, "smooth": 8, "scale": 2.2, "mom_lag": 3}, "stocks": [{"ticker": "AAOI", "name": "AOI", "sub": "光模块/光通信", "ratio": 99.71, "mom": 101.16, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.48, "days": 10, "ret20": 46.7, "strengthening": false}, {"ticker": "AAPL", "name": "苹果", "sub": "平台/互联网", "ratio": 99.79, "mom": 97.82, "state": "Lag", "quadrant": "第三象限", "dMom5": 0.95, "days": 1, "ret20": -8.3, "strengthening": false}, {"ticker": "ADBE", "name": "Adobe", "sub": "企业/AI软件", "ratio": 99.82, "mom": 99.34, "state": "Lag", "quadrant": "第三象限", "dMom5": -1.68, "days": 2, "ret20": 11.3, "strengthening": false}, {"ticker": "ADI", "name": "亚德诺", "sub": "芯片-模拟/MCU", "ratio": 96.96, "mom": 99.44, "state": "Lag", "quadrant": "第三象限", "dMom5": -0.61, "days": 2, "ret20": 3.7, "strengthening": false}, {"ticker": "AEHR", "name": "Aehr", "sub": "半导体设备", "ratio": 103.42, "mom": 102.55, "state": "Lead", "quadrant": "第一象限", "dMom5": 1.55, "days": 10, "ret20": 65.4, "strengthening": true}, {"ticker": "AKAM", "name": "Akamai", "sub": "软件基础设施", "ratio": 98.81, "mom": 101.3, "state": "Impr", "quadrant": "第二象限", "dMom5": 2.21, "days": 3, "ret20": 4.0, "strengthening": true}, {"ticker": "ALAB", "name": "Astera", "sub": "AI网络/互连", "ratio": 101.5, "mom": 99.41, "state": "Weak", "quadrant": "第四象限", "dMom5": -0.25, "days": 6, "ret20": 5.9, "strengthening": false}, {"ticker": "AMAT", "name": "应用材料", "sub": "半导体设备", "ratio": 101.34, "mom": 99.17, "state": "Weak", "quadrant": "第四象限", "dMom5": -0.68, "days": 6, "ret20": -4.2, "strengthening": false}, {"ticker": "AMD", "name": "AMD", "sub": "芯片-GPU/加速", "ratio": 101.73, "mom": 99.71, "state": "Weak", "quadrant": "第四象限", "dMom5": 0.77, "days": 15, "ret20": 3.8, "strengthening": false}, {"ticker": "AMKR", "name": "安靠", "sub": "半导体材料/封装", "ratio": 97.58, "mom": 101.67, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.48, "days": 7, "ret20": -6.3, "strengthening": true}, {"ticker": "AMZN", "name": "亚马逊", "sub": "Hyperscaler", "ratio": 101.26, "mom": 97.07, "state": "Weak", "quadrant": "第四象限", "dMom5": -4.27, "days": 3, "ret20": 6.2, "strengthening": false}, {"ticker": "ANET", "name": "Arista", "sub": "AI网络/互连", "ratio": 105.28, "mom": 100.62, "state": "Lead", "quadrant": "第一象限", "dMom5": -0.21, "days": 3, "ret20": 17.9, "strengthening": false}, {"ticker": "APH", "name": "安费诺", "sub": "AI网络/互连", "ratio": 101.65, "mom": 99.44, "state": "Weak", "quadrant": "第四象限", "dMom5": -1.73, "days": 4, "ret20": 10.5, "strengthening": false}, {"ticker": "APLD", "name": "Applied Digital", "sub": "Neocloud", "ratio": 97.53, "mom": 101.48, "state": "Impr", "quadrant": "第二象限", "dMom5": 0.7, "days": 12, "ret20": 21.0, "strengthening": true}, {"ticker": "APP", "name": "AppLovin", "sub": "企业/AI软件", "ratio": 92.33, "mom": 99.38, "state": "Lag", "quadrant": "第三象限", "dMom5": 5.21, "days": 12, "ret20": -25.7, "strengthening": false}, {"ticker": "ARM", "name": "ARM", "sub": "芯片-模拟/MCU", "ratio": 100.85, "mom": 99.64, "state": "Weak", "quadrant": "第四象限", "dMom5": -0.56, "days": 5, "ret20": 4.6, "strengthening": false}, {"ticker": "ASML", "name": "阿斯麦ADR", "sub": "半导体设备", "ratio": 102.1, "mom": 104.02, "state": "Lead", "quadrant": "第一象限", "dMom5": 4.45, "days": 5, "ret20": 5.5, "strengthening": true}, {"ticker": "ASTS", "name": "AST", "sub": "前沿-量子/航天", "ratio": 97.28, "mom": 101.46, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.82, "days": 19, "ret20": 22.8, "strengthening": false}, {"ticker": "ASX", "name": "日月光ADR", "sub": "半导体材料/封装", "ratio": 101.94, "mom": 101.59, "state": "Lead", "quadrant": "第一象限", "dMom5": 2.21, "days": 4, "ret20": 2.9, "strengthening": true}, {"ticker": "AUR", "name": "Aurora", "sub": "前沿-自驾/机器人", "ratio": 102.2, "mom": 99.38, "state": "Weak", "quadrant": "第四象限", "dMom5": -0.59, "days": 3, "ret20": 15.3, "strengthening": false}, {"ticker": "AVAV", "name": "AeroVironment", "sub": "前沿-量子/航天", "ratio": 99.0, "mom": 102.31, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.0, "days": 22, "ret20": 35.6, "strengthening": false}, {"ticker": "AVGO", "name": "博通", "sub": "芯片-GPU/加速", "ratio": 100.22, "mom": 97.63, "state": "Weak", "quadrant": "第四象限", "dMom5": -4.25, "days": 3, "ret20": 6.0, "strengthening": false}, {"ticker": "AXTI", "name": "AXT", "sub": "EDA/IP", "ratio": 100.11, "mom": 101.38, "state": "Lead", "quadrant": "第一象限", "dMom5": -2.08, "days": 2, "ret20": 78.0, "strengthening": false}, {"ticker": "BE", "name": "Bloom", "sub": "电力/核电", "ratio": 99.5, "mom": 101.41, "state": "Impr", "quadrant": "第二象限", "dMom5": 0.11, "days": 3, "ret20": 7.0, "strengthening": true}, {"ticker": "CAMT", "name": "Camtek", "sub": "半导体设备", "ratio": 98.01, "mom": 103.83, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.42, "days": 9, "ret20": 13.2, "strengthening": true}, {"ticker": "CCJ", "name": "Cameco", "sub": "电力/核电", "ratio": 97.35, "mom": 102.38, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.31, "days": 26, "ret20": 14.2, "strengthening": false}, {"ticker": "CDNS", "name": "Cadence", "sub": "EDA/IP", "ratio": 95.53, "mom": 96.69, "state": "Lag", "quadrant": "第三象限", "dMom5": -0.73, "days": 11, "ret20": -1.6, "strengthening": false}, {"ticker": "CEG", "name": "Constellation", "sub": "电力/核电", "ratio": 98.31, "mom": 100.34, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.51, "days": 4, "ret20": 11.9, "strengthening": true}, {"ticker": "CIEN", "name": "Ciena", "sub": "AI网络/互连", "ratio": 98.14, "mom": 102.91, "state": "Impr", "quadrant": "第二象限", "dMom5": 2.18, "days": 3, "ret20": 14.5, "strengthening": true}, {"ticker": "CLS", "name": "Celestica", "sub": "AI服务器/硬件", "ratio": 97.86, "mom": 100.75, "state": "Impr", "quadrant": "第二象限", "dMom5": 2.74, "days": 2, "ret20": 11.2, "strengthening": true}, {"ticker": "COHR", "name": "Coherent", "sub": "光模块/光通信", "ratio": 99.47, "mom": 100.6, "state": "Impr", "quadrant": "第二象限", "dMom5": -6.83, "days": 9, "ret20": 17.4, "strengthening": false}, {"ticker": "COIN", "name": "Coinbase", "sub": "加密金融", "ratio": 96.73, "mom": 99.63, "state": "Lag", "quadrant": "第三象限", "dMom5": 2.17, "days": 11, "ret20": -5.5, "strengthening": false}, {"ticker": "CORZ", "name": "Core Sci", "sub": "加密金融", "ratio": 98.1, "mom": 98.88, "state": "Lag", "quadrant": "第三象限", "dMom5": 0.55, "days": 7, "ret20": -3.6, "strengthening": false}, {"ticker": "CRDO", "name": "Credo", "sub": "AI网络/互连", "ratio": 102.71, "mom": 101.0, "state": "Lead", "quadrant": "第一象限", "dMom5": 0.58, "days": 9, "ret20": 28.2, "strengthening": true}, {"ticker": "CRM", "name": "Salesforce", "sub": "企业/AI软件", "ratio": 99.77, "mom": 99.87, "state": "Lag", "quadrant": "第三象限", "dMom5": -0.46, "days": 1, "ret20": 14.9, "strengthening": false}, {"ticker": "CRWD", "name": "CrowdStrike", "sub": "网络安全", "ratio": 104.22, "mom": 98.97, "state": "Weak", "quadrant": "第四象限", "dMom5": -0.78, "days": 2, "ret20": 6.8, "strengthening": false}, {"ticker": "CRWV", "name": "CoreWeave", "sub": "Neocloud", "ratio": 98.97, "mom": 104.33, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.85, "days": 11, "ret20": 43.8, "strengthening": true}, {"ticker": "CSCO", "name": "思科", "sub": "AI网络/互连", "ratio": 102.01, "mom": 98.15, "state": "Weak", "quadrant": "第四象限", "dMom5": -1.91, "days": 2, "ret20": -0.2, "strengthening": false}, {"ticker": "DDOG", "name": "Datadog", "sub": "软件基础设施", "ratio": 102.44, "mom": 98.47, "state": "Weak", "quadrant": "第四象限", "dMom5": 1.93, "days": 10, "ret20": -1.2, "strengthening": false}, {"ticker": "DELL", "name": "戴尔", "sub": "AI服务器/硬件", "ratio": 103.46, "mom": 100.23, "state": "Lead", "quadrant": "第一象限", "dMom5": 0.79, "days": 1, "ret20": 23.8, "strengthening": true}, {"ticker": "ENTG", "name": "英特格", "sub": "半导体材料/封装", "ratio": 100.98, "mom": 105.7, "state": "Lead", "quadrant": "第一象限", "dMom5": -0.04, "days": 2, "ret20": 16.6, "strengthening": false}, {"ticker": "ETN", "name": "伊顿", "sub": "数据中心电力", "ratio": 102.0, "mom": 100.52, "state": "Lead", "quadrant": "第一象限", "dMom5": -2.99, "days": 9, "ret20": 12.9, "strengthening": false}, {"ticker": "FN", "name": "Fabrinet", "sub": "光模块/光通信", "ratio": 97.82, "mom": 102.13, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.1, "days": 9, "ret20": 19.2, "strengthening": false}, {"ticker": "FORM", "name": "FormFactor", "sub": "半导体设备", "ratio": 99.43, "mom": 105.38, "state": "Impr", "quadrant": "第二象限", "dMom5": 3.86, "days": 10, "ret20": 24.7, "strengthening": true}, {"ticker": "FTNT", "name": "Fortinet", "sub": "网络安全", "ratio": 103.01, "mom": 99.48, "state": "Weak", "quadrant": "第四象限", "dMom5": 0.22, "days": 59, "ret20": -1.0, "strengthening": false}, {"ticker": "GEV", "name": "GE Vernova", "sub": "电力/核电", "ratio": 99.11, "mom": 102.86, "state": "Impr", "quadrant": "第二象限", "dMom5": 4.99, "days": 3, "ret20": 0.5, "strengthening": true}, {"ticker": "GFS", "name": "格芯", "sub": "AI服务器/硬件", "ratio": 97.5, "mom": 101.16, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.32, "days": 5, "ret20": -5.0, "strengthening": true}, {"ticker": "GLW", "name": "康宁", "sub": "光模块/光通信", "ratio": 97.67, "mom": 101.56, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.13, "days": 9, "ret20": 7.4, "strengthening": false}, {"ticker": "GOOGL", "name": "谷歌", "sub": "Hyperscaler", "ratio": 96.84, "mom": 97.36, "state": "Lag", "quadrant": "第三象限", "dMom5": -1.49, "days": 6, "ret20": -0.3, "strengthening": false}, {"ticker": "GTLB", "name": "GitLab", "sub": "软件基础设施", "ratio": 105.92, "mom": 103.56, "state": "Lead", "quadrant": "第一象限", "dMom5": -0.35, "days": 15, "ret20": 30.3, "strengthening": false}, {"ticker": "HOOD", "name": "Robinhood", "sub": "加密金融", "ratio": 100.67, "mom": 100.12, "state": "Lead", "quadrant": "第一象限", "dMom5": 2.83, "days": 2, "ret20": -4.4, "strengthening": true}, {"ticker": "HPE", "name": "慧与", "sub": "AI服务器/硬件", "ratio": 104.22, "mom": 100.61, "state": "Lead", "quadrant": "第一象限", "dMom5": 0.67, "days": 3, "ret20": 28.1, "strengthening": true}, {"ticker": "IBM", "name": "IBM", "sub": "Hyperscaler", "ratio": 97.1, "mom": 99.96, "state": "Lag", "quadrant": "第三象限", "dMom5": -0.71, "days": 1, "ret20": 10.2, "strengthening": false}, {"ticker": "INTC", "name": "英特尔", "sub": "芯片-代工/IDM", "ratio": 100.8, "mom": 100.45, "state": "Lead", "quadrant": "第一象限", "dMom5": -0.19, "days": 8, "ret20": 7.8, "strengthening": false}, {"ticker": "INTU", "name": "Intuit", "sub": "企业/AI软件", "ratio": 98.65, "mom": 100.8, "state": "Impr", "quadrant": "第二象限", "dMom5": 0.93, "days": 5, "ret20": 18.7, "strengthening": true}, {"ticker": "IONQ", "name": "IonQ", "sub": "前沿-量子/航天", "ratio": 99.21, "mom": 101.58, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.25, "days": 14, "ret20": 33.0, "strengthening": false}, {"ticker": "IREN", "name": "IREN", "sub": "Neocloud", "ratio": 97.33, "mom": 102.73, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.66, "days": 11, "ret20": 31.1, "strengthening": true}, {"ticker": "JBL", "name": "Jabil", "sub": "AI服务器/硬件", "ratio": 101.05, "mom": 104.85, "state": "Lead", "quadrant": "第一象限", "dMom5": 2.45, "days": 4, "ret20": 20.6, "strengthening": true}, {"ticker": "KLAC", "name": "科磊", "sub": "半导体设备", "ratio": 100.03, "mom": 101.17, "state": "Lead", "quadrant": "第一象限", "dMom5": 1.47, "days": 2, "ret20": -4.2, "strengthening": true}, {"ticker": "KTOS", "name": "Kratos", "sub": "前沿-量子/航天", "ratio": 98.8, "mom": 102.34, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.05, "days": 34, "ret20": 40.3, "strengthening": false}, {"ticker": "LEU", "name": "Centrus", "sub": "电力/核电", "ratio": 98.73, "mom": 100.55, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.6, "days": 21, "ret20": 21.9, "strengthening": false}, {"ticker": "LITE", "name": "Lumentum", "sub": "光模块/光通信", "ratio": 100.0, "mom": 106.05, "state": "Impr", "quadrant": "第二象限", "dMom5": 2.45, "days": 9, "ret20": 26.4, "strengthening": true}, {"ticker": "LRCX", "name": "拉姆研究", "sub": "半导体设备", "ratio": 100.85, "mom": 102.69, "state": "Lead", "quadrant": "第一象限", "dMom5": 2.47, "days": 10, "ret20": 6.1, "strengthening": true}, {"ticker": "LWLG", "name": "Lightwave", "sub": "光模块/光通信", "ratio": 98.73, "mom": 99.84, "state": "Lag", "quadrant": "第三象限", "dMom5": -0.63, "days": 2, "ret20": 21.5, "strengthening": false}, {"ticker": "MCHP", "name": "微芯", "sub": "芯片-模拟/MCU", "ratio": 97.02, "mom": 99.39, "state": "Lag", "quadrant": "第三象限", "dMom5": -1.74, "days": 1, "ret20": -2.2, "strengthening": false}, {"ticker": "MDB", "name": "MongoDB", "sub": "软件基础设施", "ratio": 105.42, "mom": 105.84, "state": "Lead", "quadrant": "第一象限", "dMom5": 1.66, "days": 11, "ret20": 47.4, "strengthening": true}, {"ticker": "META", "name": "Meta", "sub": "Hyperscaler", "ratio": 97.52, "mom": 99.64, "state": "Lag", "quadrant": "第三象限", "dMom5": -0.12, "days": 3, "ret20": -8.7, "strengthening": false}, {"ticker": "MKSI", "name": "MKS", "sub": "半导体材料/封装", "ratio": 99.15, "mom": 100.62, "state": "Impr", "quadrant": "第二象限", "dMom5": 2.77, "days": 1, "ret20": -4.3, "strengthening": true}, {"ticker": "MOD", "name": "Modine", "sub": "数据中心电力", "ratio": 94.26, "mom": 103.86, "state": "Impr", "quadrant": "第二象限", "dMom5": 6.15, "days": 4, "ret20": -8.7, "strengthening": true}, {"ticker": "MPWR", "name": "MPS", "sub": "芯片-模拟/MCU", "ratio": 98.63, "mom": 100.43, "state": "Impr", "quadrant": "第二象限", "dMom5": 0.21, "days": 6, "ret20": 6.9, "strengthening": true}, {"ticker": "MRVL", "name": "迈威尔", "sub": "芯片-GPU/加速", "ratio": 101.23, "mom": 100.06, "state": "Lead", "quadrant": "第一象限", "dMom5": -0.13, "days": 2, "ret20": 17.7, "strengthening": false}, {"ticker": "MSFT", "name": "微软", "sub": "Hyperscaler", "ratio": 103.09, "mom": 98.86, "state": "Weak", "quadrant": "第四象限", "dMom5": -6.01, "days": 1, "ret20": 25.8, "strengthening": false}, {"ticker": "MSTR", "name": "Strategy", "sub": "加密金融", "ratio": 96.83, "mom": 100.07, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.73, "days": 32, "ret20": -1.9, "strengthening": false}, {"ticker": "MTSI", "name": "MACOM", "sub": "AI网络/互连", "ratio": 99.14, "mom": 102.86, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.42, "days": 8, "ret20": 18.4, "strengthening": false}, {"ticker": "MU", "name": "美光", "sub": "存储", "ratio": 101.77, "mom": 101.25, "state": "Lead", "quadrant": "第一象限", "dMom5": 1.4, "days": 2, "ret20": 14.5, "strengthening": true}, {"ticker": "NBIS", "name": "Nebius", "sub": "Neocloud", "ratio": 102.36, "mom": 103.71, "state": "Lead", "quadrant": "第一象限", "dMom5": 4.57, "days": 3, "ret20": 56.3, "strengthening": true}, {"ticker": "NET", "name": "Cloudflare", "sub": "软件基础设施", "ratio": 105.53, "mom": 100.09, "state": "Lead", "quadrant": "第一象限", "dMom5": 1.0, "days": 4, "ret20": 13.7, "strengthening": true}, {"ticker": "NFLX", "name": "奈飞", "sub": "平台/互联网", "ratio": 97.68, "mom": 100.79, "state": "Impr", "quadrant": "第二象限", "dMom5": 0.66, "days": 6, "ret20": 13.4, "strengthening": true}, {"ticker": "NOW", "name": "ServiceNow", "sub": "企业/AI软件", "ratio": 101.51, "mom": 100.09, "state": "Lead", "quadrant": "第一象限", "dMom5": -2.48, "days": 9, "ret20": 20.1, "strengthening": false}, {"ticker": "NTAP", "name": "NetApp", "sub": "存储", "ratio": 104.99, "mom": 99.8, "state": "Weak", "quadrant": "第四象限", "dMom5": 0.39, "days": 2, "ret20": 26.4, "strengthening": false}, {"ticker": "NVDA", "name": "英伟达", "sub": "芯片-GPU/加速", "ratio": 101.31, "mom": 101.31, "state": "Lead", "quadrant": "第一象限", "dMom5": -1.47, "days": 6, "ret20": 11.0, "strengthening": false}, {"ticker": "NVMI", "name": "Nova", "sub": "半导体设备", "ratio": 94.69, "mom": 104.22, "state": "Impr", "quadrant": "第二象限", "dMom5": 3.43, "days": 9, "ret20": -4.4, "strengthening": true}, {"ticker": "NVT", "name": "nVent", "sub": "数据中心电力", "ratio": 101.94, "mom": 101.71, "state": "Lead", "quadrant": "第一象限", "dMom5": 0.14, "days": 10, "ret20": 10.6, "strengthening": true}, {"ticker": "NXPI", "name": "恩智浦", "sub": "芯片-模拟/MCU", "ratio": 96.76, "mom": 99.57, "state": "Lag", "quadrant": "第三象限", "dMom5": 1.11, "days": 12, "ret20": -11.9, "strengthening": false}, {"ticker": "OKLO", "name": "Oklo", "sub": "电力/核电", "ratio": 96.57, "mom": 101.6, "state": "Impr", "quadrant": "第二象限", "dMom5": -2.54, "days": 10, "ret20": 8.0, "strengthening": false}, {"ticker": "ON", "name": "安森美", "sub": "芯片-代工/IDM", "ratio": 98.3, "mom": 100.52, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.8, "days": 3, "ret20": -5.4, "strengthening": true}, {"ticker": "ONTO", "name": "Onto", "sub": "半导体设备", "ratio": 102.35, "mom": 105.38, "state": "Lead", "quadrant": "第一象限", "dMom5": 3.46, "days": 6, "ret20": 18.5, "strengthening": true}, {"ticker": "ORCL", "name": "甲骨文", "sub": "Hyperscaler", "ratio": 97.47, "mom": 101.48, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.73, "days": 19, "ret20": 19.1, "strengthening": false}, {"ticker": "PANW", "name": "Palo Alto", "sub": "网络安全", "ratio": 104.27, "mom": 99.25, "state": "Weak", "quadrant": "第四象限", "dMom5": 0.05, "days": 29, "ret20": 7.1, "strengthening": false}, {"ticker": "PLTR", "name": "Palantir", "sub": "企业/AI软件", "ratio": 101.71, "mom": 101.83, "state": "Lead", "quadrant": "第一象限", "dMom5": -3.75, "days": 5, "ret20": 31.5, "strengthening": false}, {"ticker": "POET", "name": "POET", "sub": "光模块/光通信", "ratio": 99.3, "mom": 100.46, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.15, "days": 10, "ret20": 29.6, "strengthening": false}, {"ticker": "PSTG", "name": "Pure Storage", "sub": "存储", "ratio": 96.96, "mom": 103.81, "state": "Impr", "quadrant": "第二象限", "dMom5": 4.07, "days": 5, "ret20": NaN, "strengthening": true}, {"ticker": "PWR", "name": "Quanta", "sub": "电力/核电", "ratio": 98.9, "mom": 99.79, "state": "Lag", "quadrant": "第三象限", "dMom5": 0.22, "days": 6, "ret20": 9.1, "strengthening": false}, {"ticker": "QBTS", "name": "D-Wave", "sub": "前沿-量子/航天", "ratio": 98.86, "mom": 101.42, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.78, "days": 15, "ret20": 26.5, "strengthening": false}, {"ticker": "QCOM", "name": "高通", "sub": "芯片-模拟/MCU", "ratio": 98.36, "mom": 99.51, "state": "Lag", "quadrant": "第三象限", "dMom5": 0.05, "days": 22, "ret20": -3.5, "strengthening": false}, {"ticker": "QUBT", "name": "Quantum Corp", "sub": "前沿-量子/航天", "ratio": 98.24, "mom": 100.16, "state": "Impr", "quadrant": "第二象限", "dMom5": -3.12, "days": 11, "ret20": 15.5, "strengthening": false}, {"ticker": "RBRK", "name": "Rubrik", "sub": "网络安全", "ratio": 106.21, "mom": 102.6, "state": "Lead", "quadrant": "第一象限", "dMom5": -1.61, "days": 8, "ret20": 29.5, "strengthening": false}, {"ticker": "RDDT", "name": "Reddit", "sub": "平台/互联网", "ratio": 97.86, "mom": 101.23, "state": "Impr", "quadrant": "第二象限", "dMom5": 7.51, "days": 1, "ret20": -1.7, "strengthening": true}, {"ticker": "RGTI", "name": "Rigetti", "sub": "前沿-量子/航天", "ratio": 98.64, "mom": 103.61, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.52, "days": 10, "ret20": 33.4, "strengthening": false}, {"ticker": "RKLB", "name": "Rocket Lab", "sub": "前沿-量子/航天", "ratio": 98.22, "mom": 100.93, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.5, "days": 17, "ret20": 18.7, "strengthening": false}, {"ticker": "SERV", "name": "Serve", "sub": "前沿-自驾/机器人", "ratio": 96.43, "mom": 100.5, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.78, "days": 2, "ret20": -2.0, "strengthening": false}, {"ticker": "SHOP", "name": "Shopify", "sub": "平台/互联网", "ratio": 102.67, "mom": 101.64, "state": "Lead", "quadrant": "第一象限", "dMom5": -5.22, "days": 8, "ret20": 24.9, "strengthening": false}, {"ticker": "SMCI", "name": "超微", "sub": "AI服务器/硬件", "ratio": 101.08, "mom": 104.59, "state": "Lead", "quadrant": "第一象限", "dMom5": 4.19, "days": 2, "ret20": 64.8, "strengthening": true}, {"ticker": "SMR", "name": "NuScale", "sub": "电力/核电", "ratio": 97.61, "mom": 100.2, "state": "Impr", "quadrant": "第二象限", "dMom5": -3.1, "days": 19, "ret20": 21.6, "strengthening": false}, {"ticker": "SNDK", "name": "SanDisk", "sub": "存储", "ratio": 100.62, "mom": 103.59, "state": "Lead", "quadrant": "第一象限", "dMom5": 4.52, "days": 3, "ret20": 21.1, "strengthening": true}, {"ticker": "SNOW", "name": "Snowflake", "sub": "软件基础设施", "ratio": 105.0, "mom": 97.15, "state": "Weak", "quadrant": "第四象限", "dMom5": -2.04, "days": 8, "ret20": 22.3, "strengthening": false}, {"ticker": "SNPS", "name": "新思", "sub": "EDA/IP", "ratio": 96.19, "mom": 101.7, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.21, "days": 15, "ret20": 9.7, "strengthening": false}, {"ticker": "SOI", "name": "Soitec", "sub": "AI服务器/硬件", "ratio": 102.88, "mom": 99.37, "state": "Weak", "quadrant": "第四象限", "dMom5": -0.82, "days": 3, "ret20": NaN, "strengthening": false}, {"ticker": "SPOT", "name": "Spotify", "sub": "平台/互联网", "ratio": 98.87, "mom": 99.42, "state": "Lag", "quadrant": "第三象限", "dMom5": 2.07, "days": 10, "ret20": 7.3, "strengthening": false}, {"ticker": "STM", "name": "意法半导体", "sub": "芯片-代工/IDM", "ratio": 99.72, "mom": 99.5, "state": "Lag", "quadrant": "第三象限", "dMom5": 0.07, "days": 3, "ret20": -12.5, "strengthening": false}, {"ticker": "STX", "name": "希捷", "sub": "存储", "ratio": 101.94, "mom": 102.92, "state": "Lead", "quadrant": "第一象限", "dMom5": 3.77, "days": 2, "ret20": 23.6, "strengthening": true}, {"ticker": "SYM", "name": "Symbotic", "sub": "前沿-自驾/机器人", "ratio": 97.32, "mom": 100.25, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.55, "days": 2, "ret20": 3.5, "strengthening": true}, {"ticker": "TEAM", "name": "Atlassian", "sub": "企业/AI软件", "ratio": 109.77, "mom": 102.14, "state": "Lead", "quadrant": "第一象限", "dMom5": -11.9, "days": 14, "ret20": 73.9, "strengthening": false}, {"ticker": "TEL", "name": "泰科电子", "sub": "AI网络/互连", "ratio": 98.61, "mom": 99.84, "state": "Lag", "quadrant": "第三象限", "dMom5": -0.37, "days": 2, "ret20": 6.4, "strengthening": false}, {"ticker": "TEM", "name": "Tempus", "sub": "企业/AI软件", "ratio": 98.74, "mom": 101.72, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.44, "days": 6, "ret20": -0.7, "strengthening": false}, {"ticker": "TER", "name": "泰瑞达", "sub": "半导体设备", "ratio": 101.1, "mom": 105.91, "state": "Lead", "quadrant": "第一象限", "dMom5": 4.73, "days": 3, "ret20": 29.9, "strengthening": true}, {"ticker": "TOST", "name": "Toast", "sub": "企业/AI软件", "ratio": 102.63, "mom": 98.63, "state": "Weak", "quadrant": "第四象限", "dMom5": -3.17, "days": 2, "ret20": 15.5, "strengthening": false}, {"ticker": "TSEM", "name": "高塔", "sub": "AI服务器/硬件", "ratio": 101.42, "mom": 101.7, "state": "Lead", "quadrant": "第一象限", "dMom5": 1.76, "days": 5, "ret20": 13.4, "strengthening": true}, {"ticker": "TSLA", "name": "特斯拉", "sub": "前沿-自驾/机器人", "ratio": 95.53, "mom": 102.04, "state": "Impr", "quadrant": "第二象限", "dMom5": 0.8, "days": 10, "ret20": -10.1, "strengthening": true}, {"ticker": "TSM", "name": "台积电ADR", "sub": "芯片-代工/IDM", "ratio": 99.3, "mom": 102.21, "state": "Impr", "quadrant": "第二象限", "dMom5": 3.17, "days": 4, "ret20": 7.0, "strengthening": true}, {"ticker": "TTMI", "name": "TTM", "sub": "半导体材料/封装", "ratio": 98.97, "mom": 101.43, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.52, "days": 9, "ret20": 6.1, "strengthening": false}, {"ticker": "TXN", "name": "德州仪器", "sub": "芯片-模拟/MCU", "ratio": 100.02, "mom": 97.99, "state": "Weak", "quadrant": "第四象限", "dMom5": -0.65, "days": 24, "ret20": -1.6, "strengthening": false}, {"ticker": "UBER", "name": "优步", "sub": "平台/互联网", "ratio": 98.56, "mom": 99.97, "state": "Lag", "quadrant": "第三象限", "dMom5": 1.11, "days": 1, "ret20": 4.8, "strengthening": false}, {"ticker": "VRT", "name": "维谛", "sub": "数据中心电力", "ratio": 96.95, "mom": 101.63, "state": "Impr", "quadrant": "第二象限", "dMom5": 2.01, "days": 3, "ret20": 1.5, "strengthening": true}, {"ticker": "VSH", "name": "Vishay", "sub": "半导体材料/封装", "ratio": 99.72, "mom": 100.03, "state": "Impr", "quadrant": "第二象限", "dMom5": 0.72, "days": 1, "ret20": -7.2, "strengthening": true}, {"ticker": "VST", "name": "Vistra", "sub": "电力/核电", "ratio": 97.06, "mom": 100.26, "state": "Impr", "quadrant": "第二象限", "dMom5": 3.51, "days": 2, "ret20": -4.7, "strengthening": true}, {"ticker": "WDAY", "name": "Workday", "sub": "企业/AI软件", "ratio": 104.69, "mom": 105.84, "state": "Lead", "quadrant": "第一象限", "dMom5": 1.65, "days": 13, "ret20": 37.2, "strengthening": true}, {"ticker": "WDC", "name": "西部数据", "sub": "存储", "ratio": 100.36, "mom": 100.56, "state": "Lead", "quadrant": "第一象限", "dMom5": 5.08, "days": 1, "ret20": 6.6, "strengthening": true}, {"ticker": "ZS", "name": "Zscaler", "sub": "网络安全", "ratio": 101.58, "mom": 105.62, "state": "Lead", "quadrant": "第一象限", "dMom5": 2.39, "days": 6, "ret20": 22.4, "strengthening": true}], "subs": [{"sub": "存储", "n": 6, "ratio": 101.84, "mom": 102.48, "state": "Lead", "quadrant": "第一象限", "dMom5": 3.88, "days": 2, "strengthening": true}, {"sub": "芯片-GPU/加速", "n": 4, "ratio": 102.13, "mom": 100.15, "state": "Lead", "quadrant": "第一象限", "dMom5": -0.58, "days": 1, "strengthening": false}, {"sub": "芯片-代工/IDM", "n": 4, "ratio": 99.33, "mom": 100.64, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.4, "days": 4, "strengthening": true}, {"sub": "芯片-模拟/MCU", "n": 7, "ratio": 98.88, "mom": 99.95, "state": "Lag", "quadrant": "第三象限", "dMom5": -0.21, "days": 1, "strengthening": false}, {"sub": "半导体设备", "n": 10, "ratio": 102.17, "mom": 105.75, "state": "Lead", "quadrant": "第一象限", "dMom5": 3.93, "days": 9, "strengthening": true}, {"sub": "半导体材料/封装", "n": 6, "ratio": 99.39, "mom": 101.99, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.08, "days": 8, "strengthening": true}, {"sub": "EDA/IP", "n": 3, "ratio": 99.52, "mom": 100.7, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.72, "days": 11, "strengthening": false}, {"sub": "AI网络/互连", "n": 8, "ratio": 101.64, "mom": 102.23, "state": "Lead", "quadrant": "第一象限", "dMom5": 0.23, "days": 10, "strengthening": true}, {"sub": "光模块/光通信", "n": 7, "ratio": 98.91, "mom": 102.03, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.22, "days": 10, "strengthening": false}, {"sub": "AI服务器/硬件", "n": 8, "ratio": 101.93, "mom": 102.87, "state": "Lead", "quadrant": "第一象限", "dMom5": 3.65, "days": 3, "strengthening": true}, {"sub": "数据中心电力", "n": 4, "ratio": 95.92, "mom": 102.96, "state": "Impr", "quadrant": "第二象限", "dMom5": 4.4, "days": 3, "strengthening": true}, {"sub": "电力/核电", "n": 9, "ratio": 98.06, "mom": 101.11, "state": "Impr", "quadrant": "第二象限", "dMom5": -0.1, "days": 19, "strengthening": false}, {"sub": "Hyperscaler", "n": 6, "ratio": 97.92, "mom": 98.37, "state": "Lag", "quadrant": "第三象限", "dMom5": -3.31, "days": 2, "strengthening": false}, {"sub": "Neocloud", "n": 4, "ratio": 100.48, "mom": 104.06, "state": "Lead", "quadrant": "第一象限", "dMom5": 4.24, "days": 1, "strengthening": true}, {"sub": "网络安全", "n": 5, "ratio": 104.26, "mom": 98.82, "state": "Weak", "quadrant": "第四象限", "dMom5": -0.13, "days": 28, "strengthening": false}, {"sub": "软件基础设施", "n": 6, "ratio": 105.18, "mom": 99.91, "state": "Weak", "quadrant": "第四象限", "dMom5": 1.55, "days": 1, "strengthening": false}, {"sub": "企业/AI软件", "n": 10, "ratio": 99.97, "mom": 101.0, "state": "Impr", "quadrant": "第二象限", "dMom5": -2.48, "days": 9, "strengthening": false}, {"sub": "平台/互联网", "n": 6, "ratio": 100.12, "mom": 100.12, "state": "Lead", "quadrant": "第一象限", "dMom5": -0.95, "days": 1, "strengthening": false}, {"sub": "加密金融", "n": 4, "ratio": 95.7, "mom": 100.02, "state": "Impr", "quadrant": "第二象限", "dMom5": 0.06, "days": 2, "strengthening": true}, {"sub": "前沿-自驾/机器人", "n": 4, "ratio": 95.93, "mom": 101.78, "state": "Impr", "quadrant": "第二象限", "dMom5": 1.22, "days": 10, "strengthening": true}, {"sub": "前沿-量子/航天", "n": 8, "ratio": 97.49, "mom": 101.95, "state": "Impr", "quadrant": "第二象限", "dMom5": -1.43, "days": 18, "strengthening": false}], "groups": ["存储", "芯片-GPU/加速", "芯片-代工/IDM", "芯片-模拟/MCU", "半导体设备", "半导体材料/封装", "EDA/IP", "AI网络/互连", "光模块/光通信", "AI服务器/硬件", "数据中心电力", "电力/核电", "Hyperscaler", "Neocloud", "网络安全", "软件基础设施", "企业/AI软件", "平台/互联网", "加密金融", "前沿-自驾/机器人", "前沿-量子/航天"]};
+const QC = {Lead:'var(--lead)',Impr:'var(--impr)',Weak:'var(--weak)',Lag:'var(--lag)'};
+const QHEX = {Lead:'#22c55e',Impr:'#3b82f6',Weak:'#f59e0b',Lag:'#ef4444'};
+const QN = {Lead:'领先Q1',Impr:'改善Q2',Weak:'转弱Q4',Lag:'落后Q3'};
+
+document.getElementById('benchTag').textContent = 'vs '+DATA.bench;
+document.getElementById('asof').textContent = '截至 '+DATA.asof+' · 参数 Z'+DATA.params.zwin+'/S'+DATA.params.smooth+'/M'+DATA.params.mom_lag;
+
+const tip = document.getElementById('tip');
+function showTip(html,e){tip.innerHTML=html;tip.style.opacity=1;moveTip(e);}
+function moveTip(e){tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'px';}
+function hideTip(){tip.style.opacity=0;}
+
+// ---------- RRG scatter ----------
+function drawPlot(mode){
+  const pts = mode==='subs'
+    ? DATA.subs.map(s=>({x:s.ratio,y:s.mom,st:s.state,g:s.strengthening,lab:s.sub,r:9,
+                         tip:`<span class="q" style="color:${QHEX[s.state]}">${QN[s.state]}</span> · ${s.sub}<br>RS-Ratio ${s.ratio} · RS-Mom ${s.mom}<br>Δ5动能 ${s.dMom5} · 在象限 ${s.days}日`}))
+    : DATA.stocks.map(s=>({x:s.ratio,y:s.mom,st:s.state,g:s.strengthening,lab:s.ticker,r:5,
+                         tip:`<span class="q" style="color:${QHEX[s.state]}">${QN[s.state]}</span> · ${s.ticker} ${s.name}<br>RS-Ratio ${s.ratio} · RS-Mom ${s.mom}<br>20日 ${s.ret20}% · Δ5动能 ${s.dMom5}`}));
+  const W=560,H=560,pad=34;
+  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
+  const xmin=Math.min(96,...xs)-.5,xmax=Math.max(104,...xs)+.5;
+  const ymin=Math.min(96,...ys)-.5,ymax=Math.max(104,...ys)+.5;
+  const sx=v=>pad+(v-xmin)/(xmax-xmin)*(W-2*pad);
+  const sy=v=>H-pad-(v-ymin)/(ymax-ymin)*(H-2*pad);
+  const x100=sx(100),y100=sy(100);
+  let svg=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="RRG scatter">`;
+  // quadrant fills
+  svg+=`<rect x="${x100}" y="${pad}" width="${W-pad-x100}" height="${y100-pad}" fill="#22c55e" opacity=".06"/>`;
+  svg+=`<rect x="${pad}" y="${pad}" width="${x100-pad}" height="${y100-pad}" fill="#3b82f6" opacity=".06"/>`;
+  svg+=`<rect x="${pad}" y="${y100}" width="${x100-pad}" height="${H-pad-y100}" fill="#ef4444" opacity=".06"/>`;
+  svg+=`<rect x="${x100}" y="${y100}" width="${W-pad-x100}" height="${H-pad-y100}" fill="#f59e0b" opacity=".07"/>`;
+  svg+=`<line x1="${pad}" y1="${y100}" x2="${W-pad}" y2="${y100}" stroke="#3a4356" stroke-width="1"/>`;
+  svg+=`<line x1="${x100}" y1="${pad}" x2="${x100}" y2="${H-pad}" stroke="#3a4356" stroke-width="1"/>`;
+  svg+=`<text class="qlabel" x="${W-pad-4}" y="${pad+14}" text-anchor="end" fill="#22c55e">领先 Leading</text>`;
+  svg+=`<text class="qlabel" x="${pad+4}" y="${pad+14}" fill="#3b82f6">改善 Improving</text>`;
+  svg+=`<text class="qlabel" x="${pad+4}" y="${H-pad-6}" fill="#ef4444">落后 Lagging</text>`;
+  svg+=`<text class="qlabel" x="${W-pad-4}" y="${H-pad-6}" text-anchor="end" fill="#f59e0b">转弱 Weakening</text>`;
+  svg+=`<text x="${W/2}" y="${H-6}" text-anchor="middle" fill="#7d8798" font-size="11" font-family="var(--mono)">JdK RS-Ratio →</text>`;
+  pts.forEach((p,i)=>{
+    const cx=sx(p.x),cy=sy(p.y);
+    const gold=p.g?`<circle cx="${cx}" cy="${cy}" r="${p.r+3}" fill="none" stroke="#facc15" stroke-width="2"/>`:'';
+    svg+=gold+`<circle class="dot" data-i="${i}" cx="${cx}" cy="${cy}" r="${p.r}" fill="${QHEX[p.st]}" opacity=".9"/>`;
+    if(mode==='subs') svg+=`<text x="${cx+p.r+3}" y="${cy+3}" font-size="10" fill="#c7cedb" font-family="var(--mono)">${p.lab}</text>`;
+  });
+  svg+=`</svg>`;
+  const box=document.getElementById('plot');box.innerHTML=svg;
+  box.querySelectorAll('.dot').forEach(d=>{
+    const p=pts[+d.dataset.i];
+    d.addEventListener('mousemove',e=>showTip(p.tip,e));
+    d.addEventListener('mouseleave',hideTip);
+  });
+}
+
+document.getElementById('modeTog').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('#modeTog button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); drawPlot(b.dataset.m);
+});
+
+// ---------- tiles grouped by sub-sector ----------
+let activeFilter=null;
+const subMap={}; DATA.subs.forEach(s=>subMap[s.sub]=s);
+function drawGroups(){
+  const host=document.getElementById('groups');host.innerHTML='';
+  DATA.groups.forEach(g=>{
+    if(activeFilter && g!==activeFilter) return;
+    const items=DATA.stocks.filter(s=>s.sub===g)
+      .sort((a,b)=> (b.strengthening-a.strengthening)|| (b.mom-a.mom));
+    if(!items.length) return;
+    const gs=subMap[g];
+    const div=document.createElement('div');div.className='group';
+    let html=`<div class="ghead"><span class="gname">${g}</span>`;
+    if(gs) html+=`<span class="gq" style="background:${QHEX[gs.state]}22;color:${QHEX[gs.state]}">${QN[gs.state]} · R${gs.ratio} M${gs.mom}</span>`;
+    html+=`<span class="gn">${items.length}只</span></div><div class="tiles">`;
+    items.forEach(s=>{
+      html+=`<div class="tile ${s.strengthening?'gold':''}" style="border-left-color:${QHEX[s.state]}">
+        <div class="tk">${s.ticker}</div><div class="nm">${s.name}</div>
+        <div class="rm"><span>R <b>${s.ratio}</b></span><span>M <b>${s.mom}</b></span></div></div>`;
+    });
+    html+=`</div>`;div.innerHTML=html;host.appendChild(div);
+  });
+}
+function drawFilters(){
+  const f=document.getElementById('filters');
+  f.innerHTML=`<span class="chip ${!activeFilter?'on':''}" data-g="">全部</span>`+
+    DATA.groups.map(g=>`<span class="chip ${activeFilter===g?'on':''}" data-g="${g}">${g}</span>`).join('');
+  f.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    activeFilter=c.dataset.g||null;drawFilters();drawGroups();
+  }));
+}
+
+const tally={};DATA.stocks.forEach(s=>tally[s.state]=(tally[s.state]||0)+1);
+document.getElementById('foot').innerHTML =
+ `个股象限分布：领先Q1 ${tally.Lead||0} · 改善Q2 ${tally.Impr||0} · 转弱Q4 ${tally.Weak||0} · 落后Q3 ${tally.Lag||0}　|　`+
+ `走强(金边) ${DATA.stocks.filter(s=>s.strengthening).length} 只　|　基准 ${DATA.bench}　|　`+
+ `RRG = 相对QQQ的强度趋势(横)与动能(纵)，坐标100为分界。仅供研究，非投资建议。`;
+
+window.addEventListener('mousemove',e=>{if(tip.style.opacity==1)moveTip(e);});
+drawPlot('subs');drawFilters();drawGroups();
+</script>
