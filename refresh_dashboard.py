@@ -16,6 +16,7 @@ import datetime
 
 import fmp_data as fd
 import tech_data as td
+import industry2 as ind2
 import build_industry_snapshot
 import final_pipeline
 import build_dashboard
@@ -25,7 +26,8 @@ def refresh(force=True):
     t0 = datetime.datetime.now()
     print(f"[{t0:%Y-%m-%d %H:%M:%S}] refresh start (force={force})")
 
-    syms = sorted(set(fd.all_symbols()) | set(td.all_tickers()) | {"SPY", "QQQ"})
+    syms = sorted(set(fd.all_symbols()) | set(td.all_tickers())
+                  | set(ind2.all_tickers()) | {"SPY", "QQQ", "SOXX"})
     # one pass with max_age_hours=0 refreshes both open+close CSV caches
     fd.load_prices(syms, max_age_hours=(0 if force else 12))
     print(f"  fetched {len(syms)} symbols")

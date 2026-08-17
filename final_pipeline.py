@@ -232,10 +232,12 @@ def run_universe(prices, opens, sectors, bench, tag):
 
 
 def main():
-    # industry
-    px_i = fd.load_prices(fd.all_symbols())
-    op_i = fd.load_prices(fd.all_symbols(), field="open")
-    ind = run_universe(px_i, op_i, list(fd.SECTORS.keys()), "SPY", "行业板块")
+    # industry -- new 70-ETF universe vs SPY
+    import industry2 as ind2
+    isyms = [ind2.BENCH] + ind2.all_tickers()
+    px_i = fd.load_prices(isyms)
+    op_i = fd.load_prices(isyms, field="open")
+    ind = run_universe(px_i, op_i, ind2.all_tickers(), "SPY", "行业板块")
     # tech (stocks vs SOXX -- semiconductor benchmark, per request)
     tsyms = td.all_tickers() + ["SOXX", "QQQ"]
     px_t = fd.load_prices(tsyms, field="close"); op_t = fd.load_prices(tsyms, field="open")

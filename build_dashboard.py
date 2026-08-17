@@ -94,15 +94,15 @@ function mv(e){tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY+14)+'
 function hide(){tip.style.opacity=0;}
 document.getElementById('sub').textContent='行业截至 '+B.ind.asof+' · 科技截至 '+B.tech.asof+' · 成本 '+B.meta.cost_bps+'bps · '+B.meta.exec;
 
-function panelHTML(id){return `
+function panelHTML(id,toggle){
+  const tog = toggle ? `<span class="toggle" id="tog-${id}"><button data-m="subs" class="on">子板块</button><button data-m="stocks">个股</button></span>` : '';
+  return `
   <div class="subtabs" id="st-${id}">
     <button data-s="plot" class="on">象限图</button>
-    <button data-s="tiles">个股列表</button>
+    <button data-s="tiles">列表</button>
   </div>
   <div class="subpane on" id="sp-plot-${id}">
-    <div class="card" style="max-width:940px"><h2>相对旋转图 (RS-Ratio × RS-Momentum)
-      <span class="toggle" id="tog-${id}">
-      <button data-m="subs" class="on">子板块</button><button data-m="stocks">个股</button></span></h2>
+    <div class="card" style="max-width:940px"><h2>相对旋转图 (RS-Ratio × RS-Momentum) ${tog}</h2>
       <div id="plot-${id}"></div></div>
   </div>
   <div class="subpane" id="sp-tiles-${id}">
@@ -149,10 +149,10 @@ function drawGroups(id,D){
       <div class="rm"><span>R<b>${s.ratio}</b></span><span>M<b>${s.mom}</b></span></div></div>`;});
     h+=`</div></div>`;host.insertAdjacentHTML('beforeend',h);});
 }
-function initPanel(id,D){
-  document.getElementById('pane-'+id).innerHTML=panelHTML(id);
-  drawPlot(id,D,'subs');drawGroups(id,D);
-  document.getElementById('tog-'+id).onclick=e=>{const b=e.target.closest('button');if(!b)return;
+function initPanel(id,D,defaultMode,toggle){
+  document.getElementById('pane-'+id).innerHTML=panelHTML(id,toggle);
+  drawPlot(id,D,defaultMode);drawGroups(id,D);
+  if(toggle) document.getElementById('tog-'+id).onclick=e=>{const b=e.target.closest('button');if(!b)return;
     document.querySelectorAll('#tog-'+id+' button').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');drawPlot(id,D,b.dataset.m);};
   document.getElementById('st-'+id).onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -185,7 +185,7 @@ document.querySelector('.tabs').onclick=e=>{const b=e.target.closest('button');i
   document.querySelectorAll('.pane').forEach(x=>x.classList.remove('on'));
   document.getElementById('pane-'+b.dataset.t).classList.add('on');};
 window.addEventListener('mousemove',e=>{if(tip.style.opacity==1)mv(e);});
-initPanel('ind',B.ind);initPanel('tech',B.tech);initHold();
+initPanel('ind',B.ind,'stocks',false);initPanel('tech',B.tech,'subs',true);initHold();
 </script>
 """
 
