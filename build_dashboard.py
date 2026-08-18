@@ -28,6 +28,20 @@ HTML = r"""<title>RRG 象限轮动看板</title>
     border-radius:7px;padding:5px 14px;font-size:12.5px;cursor:pointer;font-family:var(--mono)}
   .subtabs button.on{background:#1b2740;color:var(--accent);border-color:var(--accent);font-weight:700}
   .subpane{display:none}.subpane.on{display:block}
+  .top5{margin:0 0 14px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+  .top5 .hd{font-size:11.5px;color:var(--muted);font-family:var(--mono);margin-bottom:7px}
+  .q5row{display:flex;gap:7px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+  .q5row .qlab{font-family:var(--mono);font-size:11px;font-weight:700;min-width:78px;padding:2px 7px;border-radius:6px}
+  .top5 .t5{border:1px solid var(--border);border-left-width:3px;border-radius:7px;padding:4px 8px;background:var(--panel2);min-width:96px}
+  .top5 .t5 .tk{font-family:var(--mono);font-weight:700;font-size:12.5px}
+  .top5 .t5 .nm{font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}
+  .top5 .t5 .sc{font-family:var(--mono);font-size:9.5px;color:var(--accent);font-weight:700}
+  .mtog{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;vertical-align:middle;margin:0 4px}
+  .mtog button{background:transparent;color:var(--muted);border:0;padding:2px 8px;font-size:11px;cursor:pointer;font-family:var(--mono)}
+  .mtog button.on{background:var(--accent);color:#04121c;font-weight:700}
+  .bt{margin-top:8px;padding:7px 9px;background:#0c1522;border:1px solid var(--border);border-radius:7px;
+    font-size:11.5px;font-family:var(--mono);color:var(--ink);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .bt b{color:var(--accent)} .bt .hold{color:var(--muted)} .bt svg{vertical-align:middle}
   .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-left:auto}
   .legend b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
   .grid2{display:grid;grid-template-columns:minmax(0,540px) 1fr;gap:20px}
@@ -97,6 +111,7 @@ document.getElementById('sub').textContent='行业截至 '+B.ind.asof+' · 科�
 function panelHTML(id,toggle){
   const tog = toggle ? `<span class="toggle" id="tog-${id}"><button data-m="subs" class="on">子板块</button><button data-m="stocks">个股</button></span>` : '';
   return `
+  <div class="top5" id="top5-${id}"></div>
   <div class="subtabs" id="st-${id}">
     <button data-s="plot" class="on">象限图</button>
     <button data-s="tiles">列表</button>
@@ -149,9 +164,51 @@ function drawGroups(id,D){
       <div class="rm"><span>R<b>${s.ratio}</b></span><span>M<b>${s.mom}</b></span></div></div>`;});
     h+=`</div></div>`;host.insertAdjacentHTML('beforeend',h);});
 }
+const methodState={ind:'score',tech:'score'};
+function metricFn(m){
+  if(m==='mom') return s=>s.mom-100;
+  if(m==='dist') return s=>Math.sqrt((s.ratio-100)**2+(s.mom-100)**2);
+  return s=>(s.ratio-100)+1.5*(s.mom-100);
+}
+function spark(curve){
+  if(!curve||curve.length<2) return '';
+  const w=110,h=26,mn=Math.min(...curve),mx=Math.max(...curve),rg=mx-mn||1;
+  const pts=curve.map((v,i)=>`${(i/(curve.length-1)*w).toFixed(1)},${(h-(v-mn)/rg*h).toFixed(1)}`).join(' ');
+  return `<svg width="${w}" height="${h}"><polyline points="${pts}" fill="none" stroke="#38bdf8" stroke-width="1.4"/></svg>`;
+}
+function renderTop5(id,D,vkey){
+  const host=document.getElementById('top5-'+id);
+  const method=methodState[vkey];
+  const mf=metricFn(method);
+  let h=`<div class="hd">各象限当前打分 top5 · 打分方式
+    <span class="mtog" id="mtog-${id}">
+      <button data-mm="score" class="${method==='score'?'on':''}">综合score</button>
+      <button data-mm="mom" class="${method==='mom'?'on':''}">纯动量</button>
+      <button data-mm="dist" class="${method==='dist'?'on':''}">距离</button>
+    </span> · 独立于持仓</div>`;
+  ['Lead','Impr','Weak','Lag'].forEach(st=>{
+    const items=D.stocks.filter(s=>s.state===st).map(s=>({...s,sc:mf(s)}))
+      .sort((a,b)=>b.sc-a.sc).slice(0,5);
+    h+=`<div class="q5row"><span class="qlab" style="background:${QHEX[st]}22;color:${QHEX[st]}">${QN[st]}</span>`;
+    if(!items.length) h+=`<span style="color:var(--muted);font-size:11px">—</span>`;
+    items.forEach(s=>{h+=`<div class="t5" style="border-left-color:${QHEX[st]}">
+      <div class="tk">${s.ticker}</div><div class="nm">${s.name}</div>
+      <div class="sc">${s.sc>=0?'+':''}${s.sc.toFixed(1)} · R${s.ratio} M${s.mom}</div></div>`;});
+    h+=`</div>`;
+  });
+  const V=(B.variants[vkey]||{})[method], bench=B.variants[vkey+'_bench'];
+  if(V) h+=`<div class="bt">${spark(V.curve)}
+    <span>该打分方式回测 (全象限top5·20d·2021起·20bps)：夏普 <b>${V.sharpe}</b> · 年化 ${V.cagr}% · 回撤 ${V.dd}% · 终值 <b>$${V.final.toLocaleString()}</b>
+    <span style="color:var(--muted)">(基准${bench.name} $${bench.final.toLocaleString()})</span></span>
+    <span class="hold">当前选股: ${V.holds.join(', ')}</span></div>`;
+  host.innerHTML=h;
+  const mt=document.getElementById('mtog-'+id);
+  if(mt) mt.onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    methodState[vkey]=b.dataset.mm; renderTop5(id,D,vkey);};
+}
 function initPanel(id,D,defaultMode,toggle){
   document.getElementById('pane-'+id).innerHTML=panelHTML(id,toggle);
-  drawPlot(id,D,defaultMode);drawGroups(id,D);
+  drawPlot(id,D,defaultMode);drawGroups(id,D);renderTop5(id,D,id);
   if(toggle) document.getElementById('tog-'+id).onclick=e=>{const b=e.target.closest('button');if(!b)return;
     document.querySelectorAll('#tog-'+id+' button').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');drawPlot(id,D,b.dataset.m);};
@@ -194,7 +251,11 @@ def build():
     tech = json.load(open(os.path.join(OUT, "tech_rrg.json"), encoding="utf-8"))
     R = pickle.load(open(os.path.join(OUT, "final_results.pkl"), "rb"))
     holds = {"行业板块": R["industry"]["holds"], "科技个股": R["tech"]["holds"]}
-    blob = json.dumps({"ind": ind, "tech": tech, "holds": holds,
+    variants = {}
+    vp = os.path.join(OUT, "score_variants.json")
+    if os.path.exists(vp):
+        variants = json.load(open(vp, encoding="utf-8"))
+    blob = json.dumps({"ind": ind, "tech": tech, "holds": holds, "variants": variants,
                        "meta": {"cost_bps": R["cost_bps"], "exec": R["exec"]}}, ensure_ascii=False)
     html = HTML.replace("__BLOB__", blob)
     path = os.path.join(OUT, "dashboard.html")

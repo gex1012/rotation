@@ -82,6 +82,8 @@ def _allowed_states(cfg):
 def _rank_key(cfg):
     if cfg.rank_by == "dist":
         return lambda kv: kv[1]["dist"]           # highest conviction (far from origin)
+    if cfg.rank_by == "mom":
+        return lambda kv: kv[1]["mom"]            # pure momentum
     return lambda kv: _score(kv[1], cfg.mom_weight)
 
 
