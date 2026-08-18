@@ -85,7 +85,7 @@ st.components.v1.html(html, height=1500, scrolling=True)
 
 # ---- native backtest tables ----
 st.divider()
-st.markdown("#### 📊 回测数据表 (4bps 成本 · T+1 收盘 · 仅做多)")
+st.markdown(f"#### 📊 回测数据表 ({R['cost_bps']:.0f}bps 成本 · T+1 收盘 · 仅做多)")
 for uni in ("industry", "tech"):
     U = R[uni]
     with st.expander(f"{U['tag']} (vs {U['bench']}) · 回测结果", expanded=(uni == "industry")):

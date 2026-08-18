@@ -47,14 +47,19 @@ def yearly_win(dr, a):
 def main():
     px = fd.load_prices([ind2.BENCH] + ind2.all_tickers())
     op = fd.load_prices([ind2.BENCH] + ind2.all_tickers(), field="open")
-    sectors = ind2.all_tickers()
+    R = run_two_split(px, op, ind2.all_tickers(), ind2.BENCH, "IND")
+    pickle.dump(R, open(os.path.join(OUT, "twosplit_results.pkl"), "wb"))
+    print("\nsaved twosplit_results.pkl")
+
+
+def run_two_split(px, op, sectors, bench, tag):
     first_px = {s: px[s].first_valid_index() for s in sectors if s in px.columns}
-    bench_dr = px[ind2.BENCH].pct_change().dropna()
+    bench_dr = px[bench].pct_change().dropna()
 
     # build panels once per param, cache daily returns per (param, quads, reb)
     panels, dates_of = {}, {}
     for p in wf.EMA_GRID + wf.MA_GRID:
-        pn = build_rrg_panel(px, sectors, ind2.BENCH, p)
+        pn = build_rrg_panel(px, sectors, bench, p)
         panels[p] = pn
         dates_of[p] = pd.DatetimeIndex(sorted(set().union(*[set(s.index) for s in pn.values()]))) if pn else pd.DatetimeIndex([])
     cache = {}
@@ -94,7 +99,7 @@ def main():
             ax.plot(eq.index, eq.values, "-", lw=1.9, label=f"{name} → ${eq.iloc[-1]:,.0f}")
         db = bench_dr[bench_dr.index >= pd.Timestamp(OOS_a)]
         eqb = CAP * (1 + db).cumprod()
-        ax.plot(eqb.index, eqb.values, "--", color="#111", lw=2.4, label=f"买入持有SPY → ${eqb.iloc[-1]:,.0f}")
+        ax.plot(eqb.index, eqb.values, "--", color="#111", lw=2.4, label=f"买入持有{bench} → ${eqb.iloc[-1]:,.0f}")
         ax.axhline(CAP, color="#aaa", lw=.8, ls=":")
         ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"${v/1000:.0f}k"))
         ax.set_title(title, fontsize=12); ax.set_ylabel("组合价值 ($100k起, OOS)")
@@ -116,14 +121,14 @@ def main():
                 nm = f"{wf.QCN[a]}+{wf.QCN[b]}"
                 s2.append(mrow(nm, ser, oosa, {"参数": bp.tag().replace(mtag + "_", ""), "holding": f"{bh}d"}))
                 s2c[nm] = ser
-            c1 = pnl(s1c, oosa, f"{cname}·{mtag}·Step1 各象限 OOS vs SPY", os.path.join(OUT, f"ts_{cname[0]}_{mtag}_s1.png"))
-            c2 = pnl(s2c, oosa, f"{cname}·{mtag}·Step2 相邻合并 OOS vs SPY", os.path.join(OUT, f"ts_{cname[0]}_{mtag}_s2.png"))
+            c1 = pnl(s1c, oosa, f"{tag}·{cname}·{mtag}·Step1 各象限 OOS vs {bench}", os.path.join(OUT, f"ts_{tag}_{cname[0]}_{mtag}_s1.png"))
+            c2 = pnl(s2c, oosa, f"{tag}·{cname}·{mtag}·Step2 相邻合并 OOS vs {bench}", os.path.join(OUT, f"ts_{tag}_{cname[0]}_{mtag}_s2.png"))
             yb = yearly_win(bench_dr, oosa)
             def ymat(cser):
                 yd = {k: yearly_win(v, oosa) for k, v in cser.items()}
                 yrs = sorted(set().union(*[set(v) for v in yd.values()], set(yb)))
                 rows = [{"策略": k, **{f"{y}{'*' if y == 2026 else ''}": v.get(y) for y in yrs}} for k, v in yd.items()]
-                rows.append({"策略": "买入持有SPY", **{f"{y}{'*' if y == 2026 else ''}": yb.get(y) for y in yrs}})
+                rows.append({"策略": f"买入持有{bench}", **{f"{y}{'*' if y == 2026 else ''}": yb.get(y) for y in yrs}})
                 return pd.DataFrame(rows)
             bo = perf_win(bench_dr, oosa)
             cfg_res[mtag] = {"step1": pd.DataFrame(s1), "step2": pd.DataFrame(s2),
@@ -132,11 +137,11 @@ def main():
                              "bench": {"OOS最终$": f"{CAP*(1+bench_dr[bench_dr.index>=pd.Timestamp(oosa)]).prod():,.0f}",
                                        "OOS夏普": round(bo["sharpe"], 2), "OOS年化%": round(bo["cagr"] * 100, 2),
                                        "OOS回撤%": round(bo["dd"] * 100, 1)}}
-            print(f"\n[{cname}/{mtag}] Step1:\n", cfg_res[mtag]["step1"].to_string(index=False),
-                  f"\n  基准SPY OOS 夏普 {cfg_res[mtag]['bench']['OOS夏普']}")
+            print(f"\n[{tag}/{cname}/{mtag}] Step1:\n", cfg_res[mtag]["step1"].to_string(index=False),
+                  f"\n  基准{bench} OOS 夏普 {cfg_res[mtag]['bench']['OOS夏普']}")
         results[cname] = cfg_res
-    pickle.dump(results, open(os.path.join(OUT, "twosplit_results.pkl"), "wb"))
-    print("\nsaved twosplit_results.pkl")
+    results["tag"] = tag; results["bench"] = bench
+    return results
 
 
 if __name__ == "__main__":
