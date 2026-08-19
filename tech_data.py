@@ -15,7 +15,7 @@ import pandas as pd
 import fmp_data as fd
 from rrg_model import RRGParams, rrg_series, quad, QUAD_QUADRANT
 
-BENCH = "QQQ"
+BENCH = "SOXX"   # 与回测一致 (半导体基准); 面板 RRG 也相对 SOXX
 PARAMS = RRGParams(126, 8, 2.2, 3)
 OUT = os.path.join(os.path.dirname(__file__), "output")
 

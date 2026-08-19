@@ -66,7 +66,7 @@ tech, ind, R, html = load()
 c1, c2 = st.columns([4, 1])
 with c1:
     st.markdown("### 🎛️ RRG 象限轮动看板")
-    st.caption(f"行业(vs SPY)截至 {ind['asof']} · 科技(vs QQQ)截至 {tech['asof']} · "
+    st.caption(f"行业(vs {ind['bench']})截至 {ind['asof']} · 科技(vs {tech['bench']})截至 {tech['asof']} · "
                f"成本 {R['cost_bps']}bps · {R['exec']} · 每象限 top-{R['topk']} · 仅做多")
 with c2:
     if st.button("🔄 立即刷新数据", use_container_width=True,

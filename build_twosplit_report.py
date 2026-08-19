@@ -93,9 +93,15 @@ def build(Rind, Rtech):
           Paragraph("同一套 RRG 四象限轮动，两种动量定义：", ST["body"]),
           Paragraph("EMA RRG（z-score 版）：", ST["small"]), img(os.path.join(OUT, "formula_ema.png"), width=145 * mm),
           Paragraph("MA RRG（ROC/均线版）：", ST["small"]), img(os.path.join(OUT, "formula_ma.png"), width=145 * mm),
-          bullet("每象限并集按 score=(Ratio−100)+1.5×(Mom−100) 选 top-5 等权，不足留现金，不做空。"),
-          bullet("逐步筛选：先 holding=20 选最优参数，再选最优 holding；Step2 相邻象限合并同法；EMA/MA 各自独立。"),
-          bullet("新股 63 日护栏 + RRG 6–14 月预热天然排除次新股。"),
+          bullet("<b>Step1 选股</b>：在单个象限内，按 score=(Ratio−100)+1.5×(Mom−100) 排序取 top-5 等权(各1/5)，"
+                 "不足留现金，不做空。"),
+          bullet("<b>Step2 相邻象限合并选股（重点说明）</b>：把相邻<b>两象限的成分并成一个池子一起竞争</b>，"
+                 "按<b>同一个</b> score 排序，取<b>全场最高的 5 个、等权(各1/5)</b>——<b>不是</b>每象限各取5(那样会是10只1/10)，"
+                 "<b>也不是</b>按离原点距离；某象限可能占4个、另一个占1个，谁强谁多。不足5个留现金。"),
+          bullet("<b>逐步寻优</b>：Step1 每象限先在 holding=20 选最优参数、再选最优 holding；"
+                 "Step2 把<b>合并组合当作一个新策略</b>，对其单独做 5–30 天周期寻优，<b>不沿用单象限的周期</b>；EMA/MA 各自独立。"),
+          bullet("<b>相邻</b>指 RRG 轮动相邻：改善→领先→转弱→落后→改善，故 4 组相邻对为 Q1+Q2、Q1+Q4、Q4+Q3、Q3+Q2。"),
+          bullet("新股 63 日护栏 + RRG 6–14 月预热天然排除次新股。成交 T+1 收盘，成本 20bps。"),
           PageBreak()]
     universe_block(s, Rind, "行业板块（70 ETF vs SPY）", "SPY", False, 2)
     universe_block(s, Rtech, "科技个股（129 只 vs SOXX）", "SOXX", True, 3)

@@ -90,7 +90,7 @@ HTML = r"""<title>RRG 象限轮动看板</title>
   </header>
   <div class="tabs">
     <button data-t="ind" class="on">行业面板 (vs SPY)</button>
-    <button data-t="tech">科技面板 (vs QQQ)</button>
+    <button data-t="tech">科技面板 (vs SOXX)</button>
     <button data-t="hold">策略持仓 &amp; 最新变化</button>
   </div>
   <div class="pane on" id="pane-ind"></div>
@@ -196,11 +196,6 @@ function renderTop5(id,D,vkey){
       <div class="sc">${s.sc>=0?'+':''}${s.sc.toFixed(1)} · R${s.ratio} M${s.mom}</div></div>`;});
     h+=`</div>`;
   });
-  const V=(B.variants[vkey]||{})[method], bench=B.variants[vkey+'_bench'];
-  if(V) h+=`<div class="bt">${spark(V.curve)}
-    <span>该打分方式回测 (全象限top5·20d·2021起·20bps)：夏普 <b>${V.sharpe}</b> · 年化 ${V.cagr}% · 回撤 ${V.dd}% · 终值 <b>$${V.final.toLocaleString()}</b>
-    <span style="color:var(--muted)">(基准${bench.name} $${bench.final.toLocaleString()})</span></span>
-    <span class="hold">当前选股: ${V.holds.join(', ')}</span></div>`;
   host.innerHTML=h;
   const mt=document.getElementById('mtog-'+id);
   if(mt) mt.onclick=e=>{const b=e.target.closest('button');if(!b)return;
