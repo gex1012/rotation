@@ -68,9 +68,13 @@ with c1:
     st.markdown("### 🎛️ RRG 象限轮动看板")
     st.caption(f"行业(vs {ind['bench']})截至 {ind['asof']} · 科技(vs {tech['bench']})截至 {tech['asof']} · "
                f"成本 {R['cost_bps']}bps · {R['exec']} · 每象限 top-{R['topk']} · 仅做多")
+IS_CLOUD = HERE.startswith("/mount") or bool(os.environ.get("STREAMLIT_RUNTIME_ENV"))
 with c2:
-    if st.button("🔄 立即刷新数据", use_container_width=True,
-                 help="强制拉最新行情并重算全流程，约 9 分钟"):
+    if IS_CLOUD:
+        # 云端只读：跑取数/回测会因限流/资源而失败，改为展示仓库里已构建的数据
+        st.caption("☁️ 云端只读版；刷新请在本地跑后 push")
+    elif st.button("🔄 立即刷新数据", use_container_width=True,
+                   help="强制拉最新行情并重算全流程，约 9 分钟"):
         with st.spinner("刷新中：取数 → 象限快照 → 回测 → 重生成看板（约 9 分钟）…"):
             r = _run_refresh()
         if r.returncode == 0:

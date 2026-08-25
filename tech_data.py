@@ -89,6 +89,8 @@ def synthetic_subsector(px, tickers):
 
 def build_snapshot():
     px = load("close")
+    if BENCH not in px.columns:
+        raise RuntimeError(f"基准 {BENCH} 未取到(可能 FMP 取数失败/限流)。云端请改用仓库里已构建的数据，勿在 Cloud 上重跑取数。")
     bench = px[BENCH].dropna()
     meta = ticker_meta()
 
