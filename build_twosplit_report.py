@@ -75,13 +75,50 @@ def comparison(story, Rind, Rtech):
               Spacer(1, 3 * mm),
               Paragraph("判读方法：<b>只信两划分同时成立的结论</b>（如『MA≥EMA』『MA 稳定接近/超基准』）；"
                         "只在单一划分出现的高夏普(如科技 B 的 EMA 领先Q1 1.93)当作 regime 红利、勿外推。", ST["body"]),
-              Spacer(1, 4 * mm), hr(), Paragraph("免责声明", ST["h2"]),
-              Paragraph("历史数据规则化模拟，非真实交易；科技宇宙存在选择性偏差；不构成投资建议。数据源 FMP，EOD 价格。", ST["small"])]
+              PageBreak()]
+
+
+def drawdown_section(story, DD):
+    story += [Paragraph("第五部分 · 回撤剖析与规避建议", ST["h1"]), hr(),
+              Paragraph("各象限策略(top-5 · 20日 · MA·LR250/LM60/S10 · 2021起)的最大回撤：发生时点、深度、"
+                        "回补时间。水下曲线见下。", ST["body"])]
+    for tag in ["行业", "科技"]:
+        U = DD[tag]
+        story += [Paragraph(f"{tag} · 各象限最大回撤", ST["h2"]),
+                  df_table(U["df"], fontsize=8, bold_rows=[len(U["df"])]),
+                  Spacer(1, 1.5 * mm), img(U["chart"], width=160 * mm), PageBreak()]
+    story += [Paragraph("为什么会出现最大回撤（逐象限归因）", ST["h2"]),
+              bullet("<b>领先Q1（两宇宙都最深, -42%/-68%）</b>：峰在 2021 底/2022 初(成长动量顶)、谷在 2022-10(熊底)。"
+                     "领先象限装『又强又热』的高动量/成长/投机票(科技尤甚)，2022 加息把长久期高 beta 杀得最惨，远超基准。"
+                     "拥挤龙头=最深回撤，科技 Q1 熬到 2024-11 才回本(水下3年)。"),
+              bullet("<b>转弱Q4</b>：『买强势回调』在<b>持续下跌里失效</b>——行业 Q4 在 2022 熊市里高Ratio但走弱的票一路跌到 2023 初；"
+                     "科技 Q4 的最大回撤竟是 2025-10→12 那波半导体/AI 急跌(它持的强势票当时已 extended)。"),
+              bullet("<b>落后Q3</b>：本就装弱势板块，熊市里『弱者恒弱』跟跌，无相对强度支撑。"),
+              bullet("<b>改善Q2（最浅、修复最快）</b>：弱转强早期、不拥挤、估值未极端，2022 挨打较轻、反弹先启动；"
+                     "科技 Q2 谷 2022-12、2023-06 就回本。"),
+              bullet("<b>共性</b>：主因是 2022 加息熊(多数峰2021-22初/谷2022-10)；等权 top-5 集中+高波动细分 → 普遍比 cap-weighted 基准回撤深。"),
+              Spacer(1, 3 * mm), Paragraph("如何规避大回撤（建议）", ST["h2"]),
+              bullet("<b>① 降 Q1、抬 Q2 权重</b>：Q1 是回撤最大的敞口(尤其熊市)，Q2 最抗跌、修复最快；"
+                     "组合里给 Q1 减配、Q2 加配，能显著压低整体回撤。"),
+              bullet("<b>② 给强动量象限(Q1/Q4)加趋势关</b>：基准跌破 200 日线(且 200 线下行)时，"
+                     "对 Q1/Q4 敞口减仓/转现金(仅做多、不做空)——2022 那种单边熊能少挨打；用『收回 50 日线』快出避免 whipsaw。"),
+              bullet("<b>③ 别在下跌趋势里买 Q4 回调</b>：Q4『买强势回调』只在趋势/震荡市成立；"
+                     "叠加一个大盘趋势过滤(200线之上才开 Q4)，避免把回调买成接飞刀。"),
+              bullet("<b>④ 分散/限单票权重</b>：等权 top-5 过于集中；可扩到 top-8~10 或对单票设上限，降低个股暴雷冲击。"),
+              bullet("<b>⑤ 现金缓冲</b>：象限内合格标的不足时留现金(本报告已如此)，天生在极端普跌时降暴露。"),
+              Spacer(1, 2 * mm),
+              Paragraph("⚠️ 以上『趋势关/择时』属可选增强，会牺牲部分上行(whipsaw 成本)换回撤更浅；"
+                        "且同样有过拟合风险，需跨 regime 验证。", ST["small"]), PageBreak()]
 
 
 def build(Rind, Rtech):
     from build_final_report import make_formulas
-    make_formulas()
+    from build_scoremethod_report import make_score_formulas
+    make_formulas(); make_score_formulas()
+    DD = None
+    ddp = os.path.join(OUT, "drawdown_results.pkl")
+    if os.path.exists(ddp):
+        DD = pickle.load(open(ddp, "rb"))
     s = []
     s += [Spacer(1, 44 * mm), Paragraph("行业 + 科技 RRG · 两训练/测试划分对比", ST["title"]),
           Paragraph("行业70-ETF(vs SPY) + 科技129股(vs SOXX) · EMA/MA 双模型 · 划分 A/B · 仅做多 · 20bps · T+1收盘",
@@ -93,7 +130,9 @@ def build(Rind, Rtech):
           Paragraph("同一套 RRG 四象限轮动，两种动量定义：", ST["body"]),
           Paragraph("EMA RRG（z-score 版）：", ST["small"]), img(os.path.join(OUT, "formula_ema.png"), width=145 * mm),
           Paragraph("MA RRG（ROC/均线版）：", ST["small"]), img(os.path.join(OUT, "formula_ma.png"), width=145 * mm),
-          bullet("<b>Step1 选股</b>：在单个象限内，按 score=(Ratio−100)+1.5×(Mom−100) 排序取 top-5 等权(各1/5)，"
+          Paragraph("选股打分公式（本报告 Step1/Step2 默认用『综合 score』；RSRatio=横轴, RSMom=纵轴, 均以100为界）：", ST["small"]),
+          img(os.path.join(OUT, "formula_scores.png"), width=150 * mm),
+          bullet("<b>Step1 选股</b>：在单个象限内，按综合 score=(RSRatio−100)+1.5×(RSMom−100) 排序取 top-5 等权(各1/5)，"
                  "不足留现金，不做空。"),
           bullet("<b>Step2 相邻象限合并选股（重点说明）</b>：把相邻<b>两象限的成分并成一个池子一起竞争</b>，"
                  "按<b>同一个</b> score 排序，取<b>全场最高的 5 个、等权(各1/5)</b>——<b>不是</b>每象限各取5(那样会是10只1/10)，"
@@ -107,6 +146,11 @@ def build(Rind, Rtech):
     universe_block(s, Rtech, "科技个股（129 只 vs SOXX）", "SOXX", True, 3)
     s += [Paragraph("第四部分 · 横向对比", ST["h1"]), hr()]
     comparison(s, Rind, Rtech)
+    if DD is not None:
+        drawdown_section(s, DD)
+    s += [hr(), Paragraph("免责声明", ST["h2"]),
+          Paragraph("历史数据规则化模拟，非真实交易；科技宇宙存在选择性偏差；参数为样本内寻优、存在过拟合；"
+                    "不构成投资建议。数据源 FMP，EOD 价格。", ST["small"])]
 
     out = os.path.join(OUT, "twosplit_report.pdf")
     try:

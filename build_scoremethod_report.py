@@ -10,6 +10,27 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
 from build_report import ST, df_table, img, bullet, hr, footer, OUT
 
 
+def make_score_formulas():
+    """Render the three scoring formulas as a clean equation image."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
+    plt.rcParams["mathtext.fontset"] = "cm"
+    rows = [
+        ("① 综合 score", r"$=\;(\mathrm{RSRatio}-100)\;+\;1.5\times(\mathrm{RSMom}-100)$"),
+        ("② 纯动量 mom", r"$=\;\mathrm{RSMom}-100$"),
+        ("③ 距离 dist", r"$=\;\sqrt{(\mathrm{RSRatio}-100)^2\;+\;(\mathrm{RSMom}-100)^2}$"),
+    ]
+    fig = plt.figure(figsize=(9.0, 0.75 * len(rows) + 0.3))
+    for i, (lab, eq) in enumerate(rows):
+        y = 1 - (i + 0.7) / (len(rows) + 0.3)
+        fig.text(0.02, y, lab, fontsize=14, ha="left", va="center", fontweight="bold")
+        fig.text(0.30, y, eq, fontsize=15, ha="left", va="center")
+    fig.savefig(os.path.join(OUT, "formula_scores.png"), dpi=150, bbox_inches="tight")
+    plt.close(fig)
+
+
 def best_per_quad(df):
     out = {}
     for q in df["象限"].unique():
@@ -35,6 +56,7 @@ def uni_section(story, U, tag, part):
 
 
 def build(R):
+    make_score_formulas()
     s = []
     s += [Spacer(1, 44 * mm), Paragraph("RRG 打分方式对比 · 每象限回测", ST["title"]),
           Paragraph("每个象限 × 三种打分方式（综合score / 纯动量 / 距离）· 仅做多 · 20bps · T+1收盘",
@@ -43,8 +65,10 @@ def build(R):
           Paragraph("行业 70-ETF(vs SPY) + 科技 129股(vs SOXX) · 全样本 2021 起 · 每象限 top-5 · 20日换仓", ST["cap"]),
           PageBreak(),
           Paragraph("方法论 · 三种打分", ST["h1"]), hr(),
-          Paragraph("同一象限内，用不同指标给候选标的排序，取分数最高的 top-5：", ST["body"]),
-          df_table(pd.DataFrame([
+          Paragraph("同一象限内，用不同指标给候选标的排序，取分数最高的 top-5（等权，不足留现金）。"
+                    "其中 RSRatio=RS-Ratio(横轴)、RSMom=RS-Momentum(纵轴)，均以 100 为界：", ST["body"]),
+          img(os.path.join(OUT, "formula_scores.png"), width=150 * mm),
+          Spacer(1, 2 * mm), df_table(pd.DataFrame([
               ["综合score", "(RS-Ratio−100) + 1.5×(RS-Momentum−100)", "带方向、动量加权，偏向又强又有动能的"],
               ["纯动量 mom", "RS-Momentum − 100", "只看动能，谁在加速选谁"],
               ["距离 dist", "√[(Ratio−100)² + (Mom−100)²]", "离原点最远=信号最极端(无符号)，偏向 Ratio 最高的强势票"]],
