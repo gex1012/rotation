@@ -75,6 +75,7 @@ HTML = r"""<title>RRG 象限轮动看板</title>
   .hcard .meta{color:var(--muted);font-size:11px;font-family:var(--mono);margin-bottom:9px}
   .pill{display:inline-block;font-family:var(--mono);font-size:11.5px;padding:3px 8px;border-radius:6px;margin:2px 3px 2px 0;border:1px solid var(--border)}
   .chg{margin-top:8px;font-size:11.5px;font-family:var(--mono);display:flex;flex-direction:column;gap:3px}
+  .pnl{margin-top:8px;font-size:11.5px;font-family:var(--mono);color:var(--muted)}
   .add{color:var(--lead)}.rem{color:var(--lag)}.none{color:var(--muted)}
   .secttl{font-size:13px;color:var(--accent);font-family:var(--mono);margin:6px 0 10px;letter-spacing:.5px}
 </style>
@@ -219,15 +220,18 @@ function initHold(){
     h+=`<div class="secttl">▍ ${uni} — 各策略当前持仓 & 最新调仓变化</div><div class="hgrid">`;
     const H=B.holds[uni];
     for(const name in H){const d=H[name];
-      let pills=d.picks.map(t=>{const st=(d.states&&d.states[t])||'';return `<span class="pill" style="border-color:${QHEX[st]||'#333'};color:${QHEX[st]||'#ccc'}">${t}</span>`;}).join('');
+      const pc=v=>v==null?'':`<span class="${v>=0?'add':'rem'}"> ${v>=0?'+':''}${v.toFixed(1)}%</span>`;
+      let pills=d.picks.map(t=>{const st=(d.states&&d.states[t])||'';return `<span class="pill" style="border-color:${QHEX[st]||'#333'};color:${QHEX[st]||'#ccc'}">${t}${pc(d.pick_ret&&d.pick_ret[t])}</span>`;}).join('');
       if(!d.picks.length)pills='<span class="none">现金/空仓</span>';
       let chg='';
       chg+=d.added&&d.added.length?`<span class="add">+ 新增: ${d.added.join(', ')}</span>`:'';
       chg+=d.removed&&d.removed.length?`<span class="rem">− 移除: ${d.removed.join(', ')}</span>`:'';
       if(!chg)chg='<span class="none">较上次无变化</span>';
       h+=`<div class="hcard"><h3>${name}</h3>
-        <div class="meta">调仓日 ${d.date}　·　上次 ${d.prev_date}</div>
-        <div>${pills}</div><div class="chg">${chg}</div></div>`;}
+        <div class="meta">调仓日 ${d.date}　·　上次 ${d.prev_date}　·　下次约 ${d.next_date}</div>
+        <div>${pills}</div>
+        <div class="pnl">${d.pending?'本期待成交(次日收盘建仓)':`本期(自${d.entry_date}建仓,已持${d.days_held}日/${d.reb}日): <b class="${d.basket_ret>=0?'add':'rem'}">${d.basket_ret>=0?'+':''}${d.basket_ret==null?'-':d.basket_ret.toFixed(2)}%</b> ≈ ${d.basket_ret==null?'-':((d.basket_ret>=0?'+':'-')+'$'+Math.abs(d.basket_ret*1000).toFixed(0))}/10万`}　·　回测累计净值 $${Number(d.equity).toLocaleString()}</div>
+        <div class="chg">${chg}</div></div>`;}
     h+='</div>';
   }
   document.getElementById('pane-hold').innerHTML=h;

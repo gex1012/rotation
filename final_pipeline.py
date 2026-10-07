@@ -174,18 +174,44 @@ def run_universe(prices, opens, sectors, bench, tag):
                          **{f"{y}{'*' if y == 2026 else ''}": [yearly(d).get(y) for _, d in ykeys] for y in yrs}})
 
     # current + previous holdings (last two rebalances) for change-detection
-    def hpack(log):
+    def hpack(res, reb):
+        log = res["holdings"]; dates = res["dates"]
         cur = log[-1]; prev = log[-2] if len(log) > 1 else {"picks": [], "date": None}
         added = [x for x in cur["picks"] if x not in prev["picks"]]
         removed = [x for x in prev["picks"] if x not in cur["picks"]]
+
+        # live PnL of the current basket: decided at close of rebalance day d, filled at
+        # close of d+1 (EXEC t1_close), marked at the latest close -- equal weight.
+        i0 = dates.get_loc(pd.Timestamp(cur["date"]))
+        last_i = len(dates) - 1
+        entry_i = i0 + 1
+        pick_ret, basket_ret, entry_date, pending = {}, None, None, False
+        if entry_i <= last_i:
+            entry_date = str(dates[entry_i].date())
+            for sym in cur["picks"]:
+                if sym in prices.columns:
+                    s = prices[sym].reindex(dates).ffill()
+                    pick_ret[sym] = round((s.iloc[last_i] / s.iloc[entry_i] - 1) * 100, 2)
+            if pick_ret:
+                basket_ret = round(sum(pick_ret.values()) / len(cur["picks"]), 2)
+        else:
+            pending = True
+        nxt_i = i0 + reb
+        next_date = str(dates[nxt_i].date()) if nxt_i <= last_i else str(
+            (dates[last_i] + pd.tseries.offsets.BDay(nxt_i - last_i)).date())
         return {"date": str(cur["date"]), "picks": cur["picks"], "states": cur.get("states", {}),
                 "prev_date": str(prev.get("date")), "prev_picks": prev.get("picks", []),
-                "added": added, "removed": removed}
+                "added": added, "removed": removed,
+                "entry_date": entry_date, "pending": pending,
+                "pick_ret": pick_ret, "basket_ret": basket_ret,
+                "days_held": max(last_i - entry_i, 0), "reb": reb,
+                "next_date": next_date, "asof": str(dates[last_i].date()),
+                "equity": round(float(res["equity"].iloc[-1]) * CAP, 0)}
     holds = {}
     for q in QUADS:
-        holds[f"{QCN[q]}@{best_period[q]}d"] = hpack(get([q], best_period[q])["holdings"])
+        holds[f"{QCN[q]}@{best_period[q]}d"] = hpack(get([q], best_period[q]), best_period[q])
     for a, b in ADJ:
-        holds[f"{QCN[a]}+{QCN[b]}"] = hpack(get([a, b], 20)["holdings"])
+        holds[f"{QCN[a]}+{QCN[b]}"] = hpack(get([a, b], 20), 20)
 
     # ---- charts ----
     def pnl_chart(keys, title, path):
