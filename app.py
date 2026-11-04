@@ -73,7 +73,7 @@ with c2:
     if IS_CLOUD:
         # 云端只读：跑取数/回测会因限流/资源而失败，改为展示仓库里已构建的数据
         st.caption("☁️ 云端只读版；刷新请在本地跑后 push")
-    elif st.button("🔄 立即刷新数据", use_container_width=True,
+    elif st.button("🔄 立即刷新数据", width="stretch",
                    help="强制拉最新行情并重算全流程，约 9 分钟"):
         with st.spinner("刷新中：取数 → 象限快照 → 回测 → 重生成看板（约 9 分钟）…"):
             r = _run_refresh()
@@ -85,7 +85,7 @@ with c2:
     st.caption(f"数据更新于 {mt:%Y-%m-%d %H:%M}")
 
 # ---- interactive panel (行业 / 科技 / 持仓) ----
-st.components.v1.html(html, height=1500, scrolling=True)
+st.iframe(html, height=1500)
 
 # ---- native backtest tables ----
 st.divider()
@@ -94,11 +94,11 @@ for uni in ("industry", "tech"):
     U = R[uni]
     with st.expander(f"{U['tag']} (vs {U['bench']}) · 回测结果", expanded=(uni == "industry")):
         st.markdown("**① 各象限最优周期比较**")
-        st.dataframe(U["step4"], use_container_width=True, hide_index=True)
+        st.dataframe(U["step4"], width="stretch", hide_index=True)
         st.markdown("**② 相邻象限合并策略**")
-        st.dataframe(U["step5"], use_container_width=True, hide_index=True)
+        st.dataframe(U["step5"], width="stretch", hide_index=True)
         st.markdown("**③ 逐年收益% (最优周期 + 相邻合并 + 基准)**")
-        st.dataframe(U["ymat"], use_container_width=True, hide_index=True)
+        st.dataframe(U["ymat"], width="stretch", hide_index=True)
         st.caption(f"基准 {U['bench_row']['策略']}：{U['bench_row']['最终$']} · 夏普 {U['bench_row']['夏普']}"
                    + ("　⚠️ 科技绝对收益含幸存者偏差，仅看相对关系" if uni == "tech" else ""))
 
