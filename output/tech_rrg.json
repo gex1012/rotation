@@ -1148,10 +1148,10 @@
       "name": "甲骨文",
       "sub": "Hyperscaler",
       "ratio": 99.5,
-      "mom": 103.19,
+      "mom": 103.2,
       "state": "Impr",
       "quadrant": "第二象限",
-      "dMom5": -0.06,
+      "dMom5": -0.05,
       "days": 24,
       "ret20": -17.9,
       "strengthening": false
